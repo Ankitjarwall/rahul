@@ -18,11 +18,13 @@ const generateOrderId = async () => {
 
 // Generate User ID
 const generateUserId = async (userData) => {
-    const state = (userData.STATE || 'NA').toUpperCase().slice(0, 2);
-    const pincode = userData.PINCODE || userData.TOWN || '000000';
-    const username = (userData.USERNAME || userData.SHOPNAME || 'Unknown').replace(/\s+/g, '');
+    // Use lowercase field names consistent with schema and request body
+    const state = (userData.state || 'NA').toUpperCase().slice(0, 2);
+    const pincode = userData.pincode || userData.town || '000000';
+    const username = (userData.username || userData.shopName || 'Unknown').replace(/\s+/g, '');
 
-    const count = await User.countDocuments({ USERID: { $regex: `^${state}${pincode}${username}` } });
+    // Fix the field name in the query to match the schema (userId, not USERID)
+    const count = await User.countDocuments({ userId: { $regex: `^${state}${pincode}${username}` } });
     return `${state}${pincode}${username}${String(count + 1).padStart(2, '0')}`;
 };
 
@@ -81,10 +83,16 @@ router.get('/users', async (req, res) => {
 
 router.post('/users', async (req, res) => {
     try {
-        const USERID = await generateUserId(req.body);
-        const user = new User({ ...req.body, USERID });
+        // Validate required fields before generating userId
+        const { shopName, state, pincode, town, username } = req.body;
+        if (!shopName && !username) {
+            return res.status(400).json({ error: 'shopName or username is required' });
+        }
+
+        const userId = await generateUserId(req.body); // Use lowercase userId to match schema
+        const user = new User({ ...req.body, userId }); // Ensure userId is set
         await user.save();
-        res.json({ success: 'User added successfully', USERID });
+        res.json({ success: 'User added successfully', userId });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
