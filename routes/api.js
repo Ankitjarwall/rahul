@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
 const User = require('../models/User');
-const Product = require('../models/product');
+const Product = require('../models/Product');
 
 // Generate Order ID
 const generateOrderId = async () => {

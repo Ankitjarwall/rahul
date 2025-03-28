@@ -8,14 +8,33 @@ dotenv.config();
 const app = express();
 app.use(express.json());
 
-// Connect to MongoDB
-mongoose.connect(process.env.MONGO_URI, { useNewUrlParser: true, useUnifiedTopology: true })
-    .then(() => console.log('MongoDB connected'))
-    .catch(err => console.error(err));
+// Root route
+app.get('/', (req, res) => {
+    res.status(200).json({ message: 'Response from backend' });
+});
 
-// Routes
+// MongoDB connection function
+const connectToMongo = async () => {
+    if (mongoose.connection.readyState === 0) { // Not connected
+        await mongoose.connect(process.env.MONGO_URI, {
+            useNewUrlParser: true,
+            useUnifiedTopology: true,
+        });
+        console.log('MongoDB connected');
+    }
+};
+
+// Middleware to ensure MongoDB connection for each request
+app.use(async (req, res, next) => {
+    try {
+        await connectToMongo();
+        next();
+    } catch (err) {
+        console.error('MongoDB connection error:', err);
+        res.status(500).json({ error: 'Database connection failed' });
+    }
+});
+
 app.use('/api', apiRoutes);
 
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+module.exports = app;
