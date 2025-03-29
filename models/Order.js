@@ -8,12 +8,12 @@ const orderSchema = new mongoose.Schema({
     user: {
         userId: { type: String, required: true },
         shopName: { type: String, required: true },
+        userDues: { type: Number, default: 0 },
         address: { type: String, required: true },
         town: { type: String, required: true },
         state: { type: String, required: true },
         pincode: { type: Number, required: true },
-        contact: { type: String, required: true },
-        userDues: { type: Number, default: 0 }
+        contact: { type: String, required: true }
     },
 
     // Product Details (Array of Products)

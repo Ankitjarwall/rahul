@@ -52,15 +52,48 @@ router.post('/orders', async (req, res) => {
             return res.status(400).json({ error: "Missing required fields" });
         }
 
+        // Validate user details
+        const requiredUserFields = ["userId", "shopName", "userDues", "address", "town", "state", "pincode", "contact"];
+        for (const field of requiredUserFields) {
+            if (!user[field]) {
+                return res.status(400).json({ error: `Missing required user field: ${field}` });
+            }
+        }
+
+        // Validate product details (must be an array with at least one product)
+        if (!Array.isArray(productDetails) || productDetails.length === 0) {
+            return res.status(400).json({ error: "Product details must be a non-empty array" });
+        }
+        for (const product of productDetails) {
+            const requiredProductFields = ["name", "weight", "rate", "quantity", "totalAmount"];
+            for (const field of requiredProductFields) {
+                if (!product[field]) {
+                    return res.status(400).json({ error: `Missing required product field: ${field}` });
+                }
+            }
+        }
+
+        // Validate billing details
+        const requiredBillingFields = ["totalWeight", "totalAmount", "paymentMethod", "finalAmount"];
+        for (const field of requiredBillingFields) {
+            if (!billing[field]) {
+                return res.status(400).json({ error: `Missing required billing field: ${field}` });
+            }
+        }
+
+        // Generate Order ID
         const orderId = await generateOrderId();
         const order = new Order({ ...req.body, orderId });
 
+        // Save Order
         await order.save();
         res.json({ success: "Order added successfully", orderId });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 // 🟢 UPDATE Order
 router.put('/orders', async (req, res) => {
