@@ -4,17 +4,23 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
 
-// Generate Order ID
+// Generate Unique Order ID
 const generateOrderId = async () => {
-    const now = new Date();
-    const day = String(now.getDate()).padStart(2, '0');
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const year = now.getFullYear();
-    const datePrefix = `${day}${month}${year}`;
+    try {
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const year = now.getFullYear();
+        const datePrefix = `${day}${month}${year}`;
 
-    const count = await Order.countDocuments({ orderId: { $regex: `^${datePrefix}` } });
-    return `${datePrefix}OR${count + 1}`;
+        const count = await Order.countDocuments({ orderId: { $regex: `^${datePrefix}` } });
+        return `${datePrefix}OR${count + 1}`;
+    } catch (error) {
+        console.error("Error generating order ID:", error);
+        throw new Error("Failed to generate order ID");
+    }
 };
+
 
 // Generate User ID
 const generateUserId = async (userData) => {
@@ -26,7 +32,7 @@ const generateUserId = async (userData) => {
     return `${state}${pincode}${username}${String(count + 1).padStart(2, '0')}`;
 };
 
-// Orders
+// 🟢 GET All Orders
 router.get('/orders', async (req, res) => {
     try {
         const orders = await Order.find();
@@ -36,38 +42,69 @@ router.get('/orders', async (req, res) => {
     }
 });
 
+// 🟢 CREATE New Order
 router.post('/orders', async (req, res) => {
     try {
+        const { user, productDetails, billing } = req.body;
+
+        // Validate required fields
+        if (!user || !productDetails || !billing) {
+            return res.status(400).json({ error: "Missing required fields" });
+        }
+
         const orderId = await generateOrderId();
         const order = new Order({ ...req.body, orderId });
+
         await order.save();
-        res.json({ success: 'Order added successfully', orderId });
+        res.json({ success: "Order added successfully", orderId });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
+// 🟢 UPDATE Order
 router.put('/orders', async (req, res) => {
     try {
         const { orderId, ...updates } = req.body;
-        const order = await Order.findOneAndUpdate({ orderId }, updates, { new: true });
-        if (!order) return res.status(404).json({ error: 'Order not found' });
-        res.json({ success: 'Order updated successfully' });
+        if (!orderId) return res.status(400).json({ error: "Order ID is required" });
+
+        const order = await Order.findOneAndUpdate({ orderId }, updates, { new: true, runValidators: true });
+
+        if (!order) return res.status(404).json({ error: "Order not found" });
+        res.json({ success: "Order updated successfully", order });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
+// 🟢 SEARCH Orders
 router.post('/orders/search', async (req, res) => {
     try {
         const { query } = req.body;
-        if (!query) return res.status(400).json({ error: 'No search query provided' });
+        if (!query) return res.status(400).json({ error: "No search query provided" });
+
         const orders = await Order.find({ $text: { $search: query } });
         res.json(orders);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
+// 🟢 DELETE Order
+router.delete('/orders', async (req, res) => {
+    try {
+        const { orderId } = req.body;
+        if (!orderId) return res.status(400).json({ error: "Order ID is required" });
+
+        const order = await Order.findOneAndDelete({ orderId });
+        if (!order) return res.status(404).json({ error: "Order not found" });
+
+        res.json({ success: "Order deleted successfully" });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 
 // Users
 router.get('/users', async (req, res) => {
