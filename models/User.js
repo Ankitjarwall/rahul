@@ -1,15 +1,15 @@
 const mongoose = require('mongoose');
 
-const USER_SCHEMA = new mongoose.Schema({
-    USER_ID: { type: String, required: true, unique: true },
-    SHOP_NAME: { type: String },
-    ADDRESS: { type: String },
-    TOWN: { type: String },
-    STATE: { type: String },
-    PINCODE: { type: String },
-    CONTACT: { type: String },
-    DUES: { type: String },
-    COMMENTS: { type: String }
+const userSchema = new mongoose.Schema({
+    userId: { type: String, required: true, unique: true },
+    shopName: String,
+    address: String,
+    town: String,
+    state: String,
+    pincode: String,
+    contact: String,
+    dues: Number,
+    comments: String,
 }, { timestamps: true });
 
-module.exports = mongoose.model('USER', USER_SCHEMA);
+module.exports = mongoose.model('User', userSchema);

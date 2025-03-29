@@ -8,11 +8,11 @@
     ],
     "routes": [
         {
-            "src": "/api",
-            "methods": [
-                "GET",
-                "POST"
-            ],
+            "src": "/api/(.*)",
+            "dest": "api/index.js"
+        },
+        {
+            "src": "/",
             "dest": "api/index.js"
         }
     ]
