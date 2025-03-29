@@ -2,9 +2,9 @@ const express = require('express');
 const mongoose = require('mongoose');
 require('dotenv').config();
 
-const ORDER = require('./models/ORDER');
-const USER = require('./models/USER');
-const PRODUCT = require('./models/PRODUCT');
+const ORDER = require('../models/ORDER');
+const USER = require('../models/USER');
+const PRODUCT = require('../models/PRODUCT');
 
 const app = express();
 app.use(express.json());
