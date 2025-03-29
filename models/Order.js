@@ -21,6 +21,7 @@ const orderSchema = new mongoose.Schema({
         name: { type: String, required: true },
         description: String,
         weight: { type: Number, required: true },
+        unit: { type: String, required: true },
         rate: { type: Number, required: true },
         quantity: { type: Number, required: true },
         free: { type: Number, default: 0 },
