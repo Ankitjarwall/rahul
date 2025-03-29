@@ -4,14 +4,6 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
 
-// Normalize request body keys to uppercase
-const normalizeBody = (body) => {
-    return Object.keys(body).reduce((acc, key) => {
-        acc[key.toUpperCase()] = body[key];
-        return acc;
-    }, {});
-};
-
 // Generate Order ID
 const generateOrderId = async () => {
     const now = new Date();
@@ -20,18 +12,18 @@ const generateOrderId = async () => {
     const year = now.getFullYear();
     const datePrefix = `${day}${month}${year}`;
 
-    const count = await Order.countDocuments({ ORDERID: { $regex: `^${datePrefix}` } });
+    const count = await Order.countDocuments({ orderId: { $regex: `^${datePrefix}` } });
     return `${datePrefix}OR${count + 1}`;
 };
 
 // Generate User ID
 const generateUserId = async (userData) => {
-    const STATE = (userData.STATE || 'NA').toUpperCase().slice(0, 2);
-    const PINCODE = userData.PINCODE || userData.TOWN || '000000';
-    const USERNAME = (userData.USERNAME || userData.SHOPNAME || 'Unknown').replace(/\s+/g, '');
+    const state = (userData.state || 'NA').toUpperCase().slice(0, 2);
+    const pincode = userData.pincode || userData.town || '000000';
+    const username = (userData.username || userData.shopName || 'Unknown').replace(/\s+/g, '');
 
-    const count = await User.countDocuments({ USERID: { $regex: `^${STATE}${PINCODE}${USERNAME}` } });
-    return `${STATE}${PINCODE}${USERNAME}${String(count + 1).padStart(2, '0')}`;
+    const count = await User.countDocuments({ userId: { $regex: `^${state}${pincode}${username}` } });
+    return `${state}${pincode}${username}${String(count + 1).padStart(2, '0')}`;
 };
 
 // Orders
@@ -46,11 +38,10 @@ router.get('/orders', async (req, res) => {
 
 router.post('/orders', async (req, res) => {
     try {
-        const normalizedBody = normalizeBody(req.body);
-        const ORDERID = await generateOrderId();
-        const order = new Order({ ...normalizedBody, ORDERID });
+        const orderId = await generateOrderId();
+        const order = new Order({ ...req.body, orderId });
         await order.save();
-        res.json({ success: 'Order added successfully', ORDERID });
+        res.json({ success: 'Order added successfully', orderId });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -58,9 +49,8 @@ router.post('/orders', async (req, res) => {
 
 router.put('/orders', async (req, res) => {
     try {
-        const normalizedBody = normalizeBody(req.body);
-        const { ORDERID, ...updates } = normalizedBody;
-        const order = await Order.findOneAndUpdate({ ORDERID }, updates, { new: true });
+        const { orderId, ...updates } = req.body;
+        const order = await Order.findOneAndUpdate({ orderId }, updates, { new: true });
         if (!order) return res.status(404).json({ error: 'Order not found' });
         res.json({ success: 'Order updated successfully' });
     } catch (error) {
@@ -70,10 +60,9 @@ router.put('/orders', async (req, res) => {
 
 router.post('/orders/search', async (req, res) => {
     try {
-        const normalizedBody = normalizeBody(req.body);
-        const { QUERY } = normalizedBody;
-        if (!QUERY) return res.status(400).json({ error: 'No search query provided' });
-        const orders = await Order.find({ $text: { $search: QUERY } });
+        const { query } = req.body;
+        if (!query) return res.status(400).json({ error: 'No search query provided' });
+        const orders = await Order.find({ $text: { $search: query } });
         res.json(orders);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -92,16 +81,10 @@ router.get('/users', async (req, res) => {
 
 router.post('/users', async (req, res) => {
     try {
-        const normalizedBody = normalizeBody(req.body);
-        const { SHOPNAME, USERNAME } = normalizedBody;
-        if (!SHOPNAME && !USERNAME) {
-            return res.status(400).json({ error: 'SHOPNAME or USERNAME is required' });
-        }
-
-        const USERID = await generateUserId(normalizedBody);
-        const user = new User({ ...normalizedBody, USERID });
+        const userId = await generateUserId(req.body);
+        const user = new User({ ...req.body, userId });
         await user.save();
-        res.json({ success: 'User added successfully', USERID });
+        res.json({ success: 'User added successfully', userId });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -109,9 +92,8 @@ router.post('/users', async (req, res) => {
 
 router.put('/users', async (req, res) => {
     try {
-        const normalizedBody = normalizeBody(req.body);
-        const { USERID, ...updates } = normalizedBody;
-        const user = await User.findOneAndUpdate({ USERID }, updates, { new: true });
+        const { userId, ...updates } = req.body;
+        const user = await User.findOneAndUpdate({ userId }, updates, { new: true });
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json({ success: 'User updated successfully' });
     } catch (error) {
@@ -121,10 +103,9 @@ router.put('/users', async (req, res) => {
 
 router.post('/users/search', async (req, res) => {
     try {
-        const normalizedBody = normalizeBody(req.body);
-        const { QUERY } = normalizedBody;
-        if (!QUERY) return res.status(400).json({ error: 'No search query provided' });
-        const users = await User.find({ $text: { $search: QUERY } });
+        const { query } = req.body;
+        if (!query) return res.status(400).json({ error: 'No search query provided' });
+        const users = await User.find({ $text: { $search: query } });
         res.json(users);
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -143,12 +124,11 @@ router.get('/products', async (req, res) => {
 
 router.post('/products', async (req, res) => {
     try {
-        const normalizedBody = normalizeBody(req.body);
         const count = await Product.countDocuments();
-        const PRODUCTID = String(count + 1);
-        const product = new Product({ ...normalizedBody, PRODUCTID });
+        const productId = String(count + 1);
+        const product = new Product({ ...req.body, productId });
         await product.save();
-        res.json({ success: 'Product added successfully', PRODUCTID });
+        res.json({ success: 'Product added successfully', productId });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -156,9 +136,8 @@ router.post('/products', async (req, res) => {
 
 router.put('/products', async (req, res) => {
     try {
-        const normalizedBody = normalizeBody(req.body);
-        const { PRODUCTID, ...updates } = normalizedBody;
-        const product = await Product.findOneAndUpdate({ PRODUCTID }, updates, { new: true });
+        const { productId, ...updates } = req.body;
+        const product = await Product.findOneAndUpdate({ productId }, updates, { new: true });
         if (!product) return res.status(404).json({ error: 'Product not found' });
         res.json({ success: 'Product updated successfully' });
     } catch (error) {
@@ -168,10 +147,9 @@ router.put('/products', async (req, res) => {
 
 router.post('/products/search', async (req, res) => {
     try {
-        const normalizedBody = normalizeBody(req.body);
-        const { QUERY } = normalizedBody;
-        if (!QUERY) return res.status(400).json({ error: 'No search query provided' });
-        const products = await Product.find({ $text: { $search: QUERY } });
+        const { query } = req.body;
+        if (!query) return res.status(400).json({ error: 'No search query provided' });
+        const products = await Product.find({ $text: { $search: query } });
         res.json(products);
     } catch (error) {
         res.status(500).json({ error: error.message });
