@@ -45,7 +45,7 @@ router.get('/orders', async (req, res) => {
 // 🟢 CREATE New Order
 router.post('/orders', async (req, res) => {
     try {
-        const { user, productDetails, billing } = req.body;
+        const { user, productDetails, freeProducts, billing, isfreeProducts } = req.body;
 
         // Validate required fields
         if (!user || !productDetails || !billing) {
@@ -55,7 +55,7 @@ router.post('/orders', async (req, res) => {
         // Validate user details
         const requiredUserFields = ["userId", "shopName", "userDues", "address", "town", "state", "pincode", "contact"];
         for (const field of requiredUserFields) {
-            if (!user[field]) {
+            if (user[field] === undefined || user[field] === null) {
                 return res.status(400).json({ error: `Missing required user field: ${field}` });
             }
         }
@@ -65,10 +65,25 @@ router.post('/orders', async (req, res) => {
             return res.status(400).json({ error: "Product details must be a non-empty array" });
         }
         for (const product of productDetails) {
-            const requiredProductFields = ["name", "weight", "rate", "quantity", "totalAmount"];
+            const requiredProductFields = ["name", "weight", "unit", "rate", "quantity", "totalAmount"];
             for (const field of requiredProductFields) {
-                if (!product[field]) {
+                if (product[field] === undefined || product[field] === null) {
                     return res.status(400).json({ error: `Missing required product field: ${field}` });
+                }
+            }
+        }
+
+        // Validate free products if isfreeProducts is true
+        if (isfreeProducts) {
+            if (!Array.isArray(freeProducts) || freeProducts.length === 0) {
+                return res.status(400).json({ error: "Free products must be provided if isfreeProducts is true" });
+            }
+            for (const product of freeProducts) {
+                const requiredFreeProductFields = ["name", "weight", "unit", "rate", "quantity", "totalAmount"];
+                for (const field of requiredFreeProductFields) {
+                    if (product[field] === undefined || product[field] === null) {
+                        return res.status(400).json({ error: `Missing required free product field: ${field}` });
+                    }
                 }
             }
         }
@@ -76,7 +91,7 @@ router.post('/orders', async (req, res) => {
         // Validate billing details
         const requiredBillingFields = ["totalWeight", "totalAmount", "paymentMethod", "finalAmount"];
         for (const field of requiredBillingFields) {
-            if (!billing[field]) {
+            if (billing[field] === undefined || billing[field] === null) {
                 return res.status(400).json({ error: `Missing required billing field: ${field}` });
             }
         }
@@ -90,9 +105,11 @@ router.post('/orders', async (req, res) => {
         res.json({ success: "Order added successfully", orderId });
 
     } catch (error) {
+        console.error("Error creating order:", error);
         res.status(500).json({ error: error.message });
     }
 });
+
 
 
 // 🟢 UPDATE Order

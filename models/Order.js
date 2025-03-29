@@ -19,13 +19,20 @@ const orderSchema = new mongoose.Schema({
     // Product Details (Array of Products)
     productDetails: [{
         name: { type: String, required: true },
-        description: String,
         weight: { type: Number, required: true },
         unit: { type: String, required: true },
         rate: { type: Number, required: true },
         quantity: { type: Number, required: true },
-        free: { type: Number, default: 0 },
         totalAmount: { type: Number, required: true }
+    }],
+
+    freeProducts: [{
+        name: { type: String, required: true ,default:"NA"},
+        weight: { type: Number, required: true, default: "NA" },
+        unit: { type: String, required: true, default: "NA" },
+        rate: { type: Number, required: true, default: "NA" },
+        quantity: { type: Number, required: true, default: "NA" },
+        totalAmount: { type: Number, required: true, default: "NA" }
     }],
 
     // Billing Details
@@ -37,7 +44,8 @@ const orderSchema = new mongoose.Schema({
         totalOutstanding: { type: Number, default: 0 },
         finalAmount: { type: Number, required: true }
     },
-
+    
+    isfreeProducts:{ type: Boolean, default: false },
     comments: { type: String, default: "" }
 
 }, { timestamps: true });
