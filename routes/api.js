@@ -4,6 +4,16 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
 
+// Function to check for missing fields
+const validateFields = (requiredFields, data) => {
+    for (const field of requiredFields) {
+        if (!data[field]) {
+            return field;
+        }
+    }
+    return null;
+};
+
 // Generate Order ID
 const generateOrderId = async () => {
     const now = new Date();
@@ -37,6 +47,12 @@ router.get('/orders', async (req, res) => {
 });
 
 router.post('/orders', async (req, res) => {
+    const requiredFields = ['customerName', 'product', 'quantity', 'price'];
+    const missingField = validateFields(requiredFields, req.body);
+    if (missingField) {
+        return res.status(400).json({ error: `${missingField} is empty` });
+    }
+
     try {
         const orderId = await generateOrderId();
         const order = new Order({ ...req.body, orderId });
@@ -58,28 +74,14 @@ router.put('/orders', async (req, res) => {
     }
 });
 
-router.post('/orders/search', async (req, res) => {
-    try {
-        const { query } = req.body;
-        if (!query) return res.status(400).json({ error: 'No search query provided' });
-        const orders = await Order.find({ $text: { $search: query } });
-        res.json(orders);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // Users
-router.get('/users', async (req, res) => {
-    try {
-        const users = await User.find();
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 router.post('/users', async (req, res) => {
+    const requiredFields = ['username', 'email', 'state', 'pincode'];
+    const missingField = validateFields(requiredFields, req.body);
+    if (missingField) {
+        return res.status(400).json({ error: `${missingField} is empty` });
+    }
+
     try {
         const userId = await generateUserId(req.body);
         const user = new User({ ...req.body, userId });
@@ -101,28 +103,14 @@ router.put('/users', async (req, res) => {
     }
 });
 
-router.post('/users/search', async (req, res) => {
-    try {
-        const { query } = req.body;
-        if (!query) return res.status(400).json({ error: 'No search query provided' });
-        const users = await User.find({ $text: { $search: query } });
-        res.json(users);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 // Products
-router.get('/products', async (req, res) => {
-    try {
-        const products = await Product.find();
-        res.json(products);
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
 router.post('/products', async (req, res) => {
+    const requiredFields = ['productName', 'category', 'price', 'stock'];
+    const missingField = validateFields(requiredFields, req.body);
+    if (missingField) {
+        return res.status(400).json({ error: `${missingField} is empty` });
+    }
+
     try {
         const count = await Product.countDocuments();
         const productId = String(count + 1);
@@ -140,17 +128,6 @@ router.put('/products', async (req, res) => {
         const product = await Product.findOneAndUpdate({ productId }, updates, { new: true });
         if (!product) return res.status(404).json({ error: 'Product not found' });
         res.json({ success: 'Product updated successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-router.post('/products/search', async (req, res) => {
-    try {
-        const { query } = req.body;
-        if (!query) return res.status(400).json({ error: 'No search query provided' });
-        const products = await Product.find({ $text: { $search: query } });
-        res.json(products);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
