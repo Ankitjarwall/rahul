@@ -8,6 +8,7 @@ const userSchema = new mongoose.Schema({
     town: String,
     state: String,
     pincode: String,
+    delivery: Number,
     contact: String,
     dues: Number,
     comments: String,
