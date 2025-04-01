@@ -6,6 +6,7 @@ const productSchema = new mongoose.Schema({
     productImage: String,
     mrp: Number,
     weight: String,
+    unit: String,
     rate: Number,
 }, { timestamps: true });
 
