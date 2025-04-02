@@ -4,6 +4,31 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
 
+
+// Function to convert a string to a number
+const convertToNumber = (value) => {
+    if (typeof value === 'number') return value;
+    if (typeof value === 'string') {
+        const number = parseFloat(value.replace(/,/g, ''));
+        return isNaN(number) ? null : number;
+    }
+    return 0;
+};
+
+// Route to convert string into a number
+// 🟢 Route to convert a string into a number
+// Input: { value: string } in the request body
+// Output: { convertedValue: number } in the response
+router.post('/cal', (req, res) => {
+    const { value } = req.body;
+    if (!value) {
+        return res.status(400).json({ error: "No value provided" });
+    }
+
+    const number = convertToNumber(value);
+    res.json({ convertedValue: number });
+});
+
 // Generate Unique Order ID
 const generateOrderId = async () => {
     try {
