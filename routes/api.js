@@ -29,6 +29,17 @@ router.post('/cal', (req, res) => {
     res.json({ convertedValue: number });
 });
 
+//function for multiplication
+router.post('/multi', (req, res) => {
+    const { value1, value2 } = req.body;
+    if (value1 === undefined || value2 === undefined) {
+        return res.status(400).json({ error: "Missing values for multiplication" });
+    }
+
+    const result = convertToNumber(value1) * convertToNumber(value2);
+    res.json({ result });
+});
+
 // Generate Unique Order ID
 const generateOrderId = async () => {
     try {
