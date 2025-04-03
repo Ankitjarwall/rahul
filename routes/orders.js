@@ -1,6 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
+const PDFDocument = require('pdfkit'); 
+const SVGtoPDF = require('svg-to-pdfkit');
+const fs = require('fs');
+const path = require('path');
 
 // GET all orders (limited fields for main page)
 router.get('/', async (req, res) => {
