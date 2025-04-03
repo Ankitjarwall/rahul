@@ -7,14 +7,23 @@ const orderSchema = new mongoose.Schema({
     // User Details
     user: {
         userId: { type: String, required: true },
+        name: { type: String, required: true },
         shopName: { type: String, required: true },
         userDues: { type: Number, default: 0 },
         address: { type: String, required: true },
         town: { type: String, required: true },
         state: { type: String, required: true },
         pincode: { type: Number, required: true },
-        contact: { type: String, required: true }
+        contact: [{
+            contact_1: { type: String, required: true },
+            contact_2: { type: String, required: true }
+        }],
+        comments: [{
+            message: { type: String, default: "" },
+            date: { type: Date, default: Date.now }
+        }]
     },
+
 
     // Product Details
     productDetails: [{
@@ -38,22 +47,29 @@ const orderSchema = new mongoose.Schema({
 
     // Billing Details
     billing: {
-        totalWeight: { type: Number, required: true },
+        orderWeight: { type: Number, required: true },
+        orderAmount: { type: Number, required: true },
+        deliveryCharges: { type: Number, required: true },
         totalAmount: { type: Number, required: true },
         paymentMethod: { type: String, required: true },
-        dues: { type: Number, default: 0 },
-        totalOutstanding: { type: Number, default: 0 },
+        moneyGiven: { type: Number, required: true },
+        pastOrderDue: { type: Number, default: 0 },
+        paidAmount: { type: Number, default: 0 },
         finalAmount: { type: Number, required: true }
     },
 
     isfreeProducts: { type: Boolean, default: false },
-    comments: { type: String, default: "" }
+    comments: [{
+        message: { type: String, default: "" },
+        date: { type: Date, default: Date.now }
+    }]
 
 }, { timestamps: true });
 
 // Index for search functionality
 orderSchema.index({
     "user.shopName": "text",
+    "user.name": "text",
     "user.address": "text",
     "billing.paymentMethod": "text"
 });

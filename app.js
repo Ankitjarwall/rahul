@@ -1,40 +1,37 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors');
 const dotenv = require('dotenv');
-const apiRoutes = require('./routes/api');
+const userRoutes = require('./routes/user');
+const orderRoutes = require('./routes/order');
+const productRoutes = require('./routes/product');
 
+// Load environment variables
 dotenv.config();
 
 const app = express();
+
+// Middleware
 app.use(express.json());
+app.use(cors());
 
-// Root route
+// Connect to MongoDB
+mongoose.connect(process.env.MONGO_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+}).then(() => console.log("MongoDB Connected"))
+    .catch(err => console.error("MongoDB Connection Error:", err));
+
+// Routes
+app.use('/users', userRoutes);s
+app.use('/orders', orderRoutes);
+app.use('/products', productRoutes);
+
+// Root Route
 app.get('/', (req, res) => {
-    res.status(200).json({ message: 'Response from backend' });
+    res.send("Welcome to the API");
 });
 
-// MongoDB connection function
-const connectToMongo = async () => {
-    if (mongoose.connection.readyState === 0) { // Not connected
-        await mongoose.connect(process.env.MONGO_URI, {
-            useNewUrlParser: true,
-            useUnifiedTopology: true,
-        });
-        console.log('MongoDB connected');
-    }
-};
-
-// Middleware to ensure MongoDB connection for each request
-app.use(async (req, res, next) => {
-    try {
-        await connectToMongo();
-        next();
-    } catch (err) {
-        console.error('MongoDB connection error:', err);
-        res.status(500).json({ error: 'Database connection failed' });
-    }
-});
-
-app.use('/api', apiRoutes);
-
-module.exports = app;
+// Start Server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

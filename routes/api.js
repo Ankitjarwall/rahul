@@ -10,7 +10,7 @@ const convertToNumber = (value) => {
     if (typeof value === 'number') return value;
     if (typeof value === 'string') {
         const number = parseFloat(value.replace(/,/g, ''));
-        return isNaN(number) ? null : number;
+        return isNaN(number) ? 0 : number;
     }
     return 0;
 };
@@ -45,7 +45,7 @@ router.post('/multi', (req, res) => {
 router.post('/add', (req, res) => {
     const { value1, value2 } = req.body;
     if (value1 === undefined || value2 === undefined) {
-        return res.status(400).json({ error: "Missing values for multiplication" });
+        return res.status(400).json({ error: "Missing values for addition" });
     }
 
     const result = convertToNumber(value1) + convertToNumber(value2);
@@ -122,7 +122,7 @@ router.post('/orders', async (req, res) => {
             return res.status(400).json({ error: "Product details must be a non-empty array" });
         }
         for (const product of productDetails) {
-            const requiredProductFields = ["name", "weight", "unit", "rate", "quantity", "totalAmount"];
+            const requiredProductFields = ["name", "weight", "unit", "mrp", "rate", "quantity", "totalAmount"];
             for (const field of requiredProductFields) {
                 if (product[field] === undefined || product[field] === null) {
                     return res.status(400).json({ error: `Missing required product field: ${field}` });
@@ -156,12 +156,7 @@ router.post('/orders', async (req, res) => {
         // Generate unique Order ID
         const orderId = await generateOrderId();
 
-        // Ensure order ID is unique
-        const existingOrder = await Order.findOne({ orderId });
-        if (existingOrder) {
-            return res.status(400).json({ error: "Order ID already exists, please try again." });
-        }
-
+        
         // Create and save the order
         const order = new Order({ ...req.body, orderId });
         await order.save();
