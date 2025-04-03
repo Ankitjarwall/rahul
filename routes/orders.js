@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
-const PDFDocument = require('pdfkit'); 
+const PDFDocument = require('pdfkit');
 const SVGtoPDF = require('svg-to-pdfkit');
 const fs = require('fs');
 const path = require('path');
@@ -89,30 +89,54 @@ router.post('/search', async (req, res) => {
     }
 });
 
+
 // GENERATE PDF INVOICE
 router.get('/invoice/:orderId', async (req, res) => {
     try {
+        // Check dependencies
+        if (!PDFDocument) throw new Error('PDFDocument is not available. Check pdfkit installation.');
+        if (!SVGtoPDF) throw new Error('SVGtoPDF is not available. Check svg-to-pdfkit installation.');
+
+        // Check logo file
+        const logoPath = path.join(__dirname, '../assets/logo.svg');
+        if (!fs.existsSync(logoPath)) {
+            throw new Error(`Logo file not found at ${logoPath}`);
+        }
+
         // Fetch order from MongoDB
         const order = await Order.findOne({ orderId: req.params.orderId });
-        if (!order) return res.status(404).json({ error: 'Order not found' });
-
-        // Create PDF document
-        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
 
         // Set response headers
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
 
+        // Create PDF document
+        const doc = new PDFDocument({ size: 'A4', margin: 50 });
+
+        // Handle stream errors
+        doc.on('error', (err) => {
+            console.error('PDF Stream Error:', err);
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Failed to generate PDF' });
+            }
+        });
+
+        res.on('error', (err) => {
+            console.error('Response Stream Error:', err);
+        });
+
         // Pipe PDF to response
         doc.pipe(res);
 
         // Load logo
-        const logoPath = path.join(__dirname, '../assets/logo.svg');
         const logoSVG = fs.readFileSync(logoPath, 'utf8');
 
         // Header
         doc.fontSize(20).fillColor('#2c3e50').text('MacBease Connections Private Limited', { align: 'center' });
-        SVGtoPDF(doc, logoSVG, 250, 30, { width: 100 }); // Center logo
+        SVGtoPDF(doc, logoSVG, 250, 30, { width: 100 });
         doc.fontSize(10).fillColor('#7f8c8d').text('Be connected with each other', { align: 'center' });
         doc.moveDown(2);
 
@@ -160,10 +184,10 @@ router.get('/invoice/:orderId', async (req, res) => {
             doc.rect(50, y, 500, 20).fill(index % 2 ? '#f5f6fa' : '#ffffff');
             doc.fillColor('#000000');
             doc.text(product.name, 50, y + 5, { width: itemWidth[0] });
-            doc.text(product.weight, 200, y + 5);
+            doc.text(product.weight.toString(), 200, y + 5); // Ensure string
             doc.text(product.unit, 260, y + 5);
             doc.text(`₹${product.rate}`, 320, y + 5);
-            doc.text(product.quantity, 380, y + 5);
+            doc.text(product.quantity.toString(), 380, y + 5); // Ensure string
             doc.text(`₹${product.totalAmount}`, 440, y + 5);
             y += 20;
         });
@@ -186,9 +210,9 @@ router.get('/invoice/:orderId', async (req, res) => {
                 doc.rect(50, y, 500, 20).fill(index % 2 ? '#f5f6fa' : '#ffffff');
                 doc.fillColor('#000000');
                 doc.text(product.name, 50, y + 5, { width: itemWidth[0] });
-                doc.text(product.weight, 200, y + 5);
+                doc.text(product.weight.toString(), 200, y + 5); // Ensure string
                 doc.text(product.unit, 260, y + 5);
-                doc.text(product.quantity, 380, y + 5);
+                doc.text(product.quantity.toString(), 380, y + 5); // Ensure string
                 y += 20;
             });
         }
@@ -221,10 +245,14 @@ router.get('/invoice/:orderId', async (req, res) => {
             { align: 'center' }
         );
 
-        // Finalize PDF
+        // Finalize PDF only after all content is added
         doc.end();
+
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        console.error('PDF Generation Error:', error);
+        if (!res.headersSent) {
+            res.status(500).json({ error: `Failed to generate PDF: ${error.message}` });
+        }
     }
 });
 
