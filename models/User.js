@@ -21,6 +21,6 @@ const userSchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
-UserSchema.index({ name: "text", shopName: "text" });
+userSchema.index({ name: "text", shopName: "text" });
 
 module.exports = mongoose.model('User', userSchema);

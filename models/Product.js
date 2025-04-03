@@ -15,6 +15,6 @@ const productSchema = new mongoose.Schema({
     rate: Number,
 }, { timestamps: true });
 
-ProductSchema.index({ name: "text" });
+productSchema.index({ name: "text" });
 
 module.exports = mongoose.model('Product', productSchema);
