@@ -274,8 +274,28 @@ router.post('/products', async (req, res) => {
     try {
         const count = await Product.countDocuments();
         const productId = String(count + 1);
-        const product = new Product({ ...req.body, productId });
+
+        const productData = {
+            productId,
+            productName: req.body.productName,
+            productImage: req.body.productImage.map(img => ({ image_1: img })),
+            productDescription: req.body.productDescription.map(desc => ({
+                title: desc.title,
+                description: desc.description
+            })),
+            productFeatures: req.body.productFeatures.map(feature => ({ feature })),
+            howToUse: req.body.howToUse.map(step => ({ step })),
+            precautions: req.body.precautions.map(precaution => ({ precaution })),
+            note: req.body.note.map(note => ({ note })),
+            mrp: req.body.mrp,
+            weight: req.body.weight,
+            unit: req.body.unit,
+            rate: req.body.rate,
+        };
+
+        const product = new Product(productData);
         await product.save();
+
         res.json({ success: 'Product added successfully', productId });
     } catch (error) {
         res.status(500).json({ error: error.message });

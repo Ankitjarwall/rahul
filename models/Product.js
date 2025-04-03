@@ -3,12 +3,25 @@ const mongoose = require('mongoose');
 const productSchema = new mongoose.Schema({
     productId: { type: String, required: true, unique: true },
     productName: String,
-    productImage: String,
-    productDetails: String,
-    productFeatures: String,
-    howToUse: String,
-    precautions: String,
-    note: String,
+    productImage: [{
+        image_1: { type: String, required: true },
+    }],
+    productDescription: [{
+        title: { type: String, required: true },
+        description: { type: String, required: true }
+    }],
+    productFeatures: [{
+        feature: { type: String, required: true }
+    }],
+    howToUse: [{
+        step: { type: String, required: true },
+    }],
+    precautions: [{
+        precaution: { type: String, required: true }
+    }],
+    note: [{
+        note: { type: String, required: true }
+    }],
     mrp: Number,
     weight: String,
     unit: String,
