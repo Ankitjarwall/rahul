@@ -41,7 +41,7 @@ router.post('/multi', (req, res) => {
 });
 
 
-//function for add
+//function for add two digit
 router.post('/add', (req, res) => {
     const { value1, value2 } = req.body;
     if (value1 === undefined || value2 === undefined) {
@@ -90,6 +90,7 @@ router.get('/orders', async (req, res) => {
     }
 });
 
+
 // 🟢 CREATE New Order
 router.post('/orders', async (req, res) => {
     try {
@@ -108,7 +109,15 @@ router.post('/orders', async (req, res) => {
             }
         }
 
-        // Validate product details (must be an array with at least one product)
+        // Validate pincode and contact format
+        if (!/^\d{6}$/.test(user.pincode.toString())) {
+            return res.status(400).json({ error: "Invalid pincode. Must be 6 digits." });
+        }
+        if (!/^\d{10}$/.test(user.contact.toString())) {
+            return res.status(400).json({ error: "Invalid contact number. Must be 10 digits." });
+        }
+
+        // Validate product details
         if (!Array.isArray(productDetails) || productDetails.length === 0) {
             return res.status(400).json({ error: "Product details must be a non-empty array" });
         }
@@ -121,7 +130,7 @@ router.post('/orders', async (req, res) => {
             }
         }
 
-        // Validate free products if isfreeProducts is true
+        // Validate free products if applicable
         if (isfreeProducts) {
             if (!Array.isArray(freeProducts) || freeProducts.length === 0) {
                 return res.status(400).json({ error: "Free products must be provided if isfreeProducts is true" });
@@ -144,13 +153,20 @@ router.post('/orders', async (req, res) => {
             }
         }
 
-        // Generate Order ID
+        // Generate unique Order ID
         const orderId = await generateOrderId();
-        const order = new Order({ ...req.body, orderId });
 
-        // Save Order
+        // Ensure order ID is unique
+        const existingOrder = await Order.findOne({ orderId });
+        if (existingOrder) {
+            return res.status(400).json({ error: "Order ID already exists, please try again." });
+        }
+
+        // Create and save the order
+        const order = new Order({ ...req.body, orderId });
         await order.save();
-        res.json({ success: "Order added successfully", orderId });
+
+        res.json({ success: "Order added successfully", order });
 
     } catch (error) {
         console.error("Error creating order:", error);
@@ -158,18 +174,24 @@ router.post('/orders', async (req, res) => {
     }
 });
 
-
-
 // 🟢 UPDATE Order
 router.put('/orders', async (req, res) => {
     try {
         const { orderId, ...updates } = req.body;
+
         if (!orderId) return res.status(400).json({ error: "Order ID is required" });
 
-        const order = await Order.findOneAndUpdate({ orderId }, updates, { new: true, runValidators: true });
+        // Find and update the order
+        const order = await Order.findOneAndUpdate(
+            { orderId },
+            { $set: updates }, // Prevents removing unspecified fields
+            { new: true, runValidators: true }
+        );
 
         if (!order) return res.status(404).json({ error: "Order not found" });
+
         res.json({ success: "Order updated successfully", order });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
