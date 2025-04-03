@@ -4,7 +4,6 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const Product = require('../models/Product');
 
-
 // Function to convert a string to a number
 const convertToNumber = (value) => {
     if (typeof value === 'number') return value;
@@ -16,38 +15,31 @@ const convertToNumber = (value) => {
 };
 
 // Route to convert string into a number
-// 🟢 Route to convert a string into a number
-// Input: { value: string } in the request body
-// Output: { convertedValue: number } in the response
 router.post('/cal', (req, res) => {
     const { value } = req.body;
     if (!value) {
         return res.status(400).json({ error: "No value provided" });
     }
-
     const number = convertToNumber(value);
     res.json({ convertedValue: number });
 });
 
-//function for multiplication
+// Function for multiplication
 router.post('/multi', (req, res) => {
     const { value1, value2 } = req.body;
     if (value1 === undefined || value2 === undefined) {
         return res.status(400).json({ error: "Missing values for multiplication" });
     }
-
     const result = convertToNumber(value1) * convertToNumber(value2);
     res.json({ result });
 });
 
-
-//function for add two digit
+// Function for addition
 router.post('/add', (req, res) => {
     const { value1, value2 } = req.body;
     if (value1 === undefined || value2 === undefined) {
         return res.status(400).json({ error: "Missing values for addition" });
     }
-
     const result = convertToNumber(value1) + convertToNumber(value2);
     res.json({ result });
 });
@@ -60,7 +52,6 @@ const generateOrderId = async () => {
         const month = String(now.getMonth() + 1).padStart(2, '0');
         const year = now.getFullYear();
         const datePrefix = `${day}${month}${year}`;
-
         const count = await Order.countDocuments({ orderId: { $regex: `^${datePrefix}` } });
         return `${datePrefix}OR${count + 1}`;
     } catch (error) {
@@ -69,18 +60,16 @@ const generateOrderId = async () => {
     }
 };
 
-
 // Generate User ID
 const generateUserId = async (userData) => {
     const state = (userData.state || 'NA').toUpperCase().slice(0, 2);
     const pincode = userData.pincode || userData.town || '000000';
     const username = (userData.username || userData.shopName || 'Unknown').replace(/\s+/g, '');
-
     const count = await User.countDocuments({ userId: { $regex: `^${state}${pincode}${username}` } });
     return `${state}${pincode}${username}${String(count + 1).padStart(2, '0')}`;
 };
 
-// 🟢 GET All Orders
+// GET All Orders
 router.get('/orders', async (req, res) => {
     try {
         const orders = await Order.find();
@@ -90,15 +79,14 @@ router.get('/orders', async (req, res) => {
     }
 });
 
-
-// 🟢 CREATE New Order
+// CREATE New Order
 router.post('/orders', async (req, res) => {
     try {
-        const { user, productDetails, freeProducts, billing, isfreeProducts } = req.body;
+        const { user, productDetails, freeProducts, billing, isfreeProducts, comments } = req.body;
 
         // Validate required fields
         if (!user || !productDetails || !billing) {
-            return res.status(400).json({ error: "Missing required fields" });
+            return res.status(400).json({ error: "Missing required fields: user, productDetails, and billing are required" });
         }
 
         // Validate and format user details
@@ -109,13 +97,13 @@ router.post('/orders', async (req, res) => {
             }
         }
 
-        // Ensure contact is an array of objects
+        // Ensure user.contact is an array of objects
         if (!Array.isArray(user.contact)) {
-            return res.status(400).json({ error: "Contact must be an array" });
+            return res.status(400).json({ error: "User contact must be an array" });
         }
         user.contact = user.contact.map(contact => ({
-            contact_1: contact.contact_1 || String(contact), // Handle if contact is a single string
-            contact_2: contact.contact_2 || "" // Default to empty string if not provided
+            contact_1: contact.contact_1 || String(contact),
+            contact_2: contact.contact_2 || ""
         }));
 
         // Validate pincode and contact format
@@ -128,12 +116,12 @@ router.post('/orders', async (req, res) => {
             }
         }
 
-        // Ensure comments is an array of objects (if provided)
+        // Validate user.comments (optional, but must be an array if provided)
         if (user.comments && !Array.isArray(user.comments)) {
-            return res.status(400).json({ error: "Comments must be an array" });
+            return res.status(400).json({ error: "User comments must be an array" });
         }
         user.comments = (user.comments || []).map(comment => ({
-            message: comment.message || String(comment), // Handle if comment is a single string
+            message: comment.message || String(comment),
             date: comment.date || Date.now()
         }));
 
@@ -141,47 +129,67 @@ router.post('/orders', async (req, res) => {
         if (!Array.isArray(productDetails) || productDetails.length === 0) {
             return res.status(400).json({ error: "Product details must be a non-empty array" });
         }
-        // ... (rest of your productDetails validation remains unchanged)
+        for (const product of productDetails) {
+            const requiredProductFields = ["name", "weight", "unit", "rate", "quantity", "totalAmount"];
+            for (const field of requiredProductFields) {
+                if (product[field] === undefined || product[field] === null) {
+                    return res.status(400).json({ error: `Missing required product field: ${field}` });
+                }
+            }
+        }
+
+        // Validate free products if applicable
+        if (isfreeProducts) {
+            if (!Array.isArray(freeProducts) || freeProducts.length === 0) {
+                return res.status(400).json({ error: "Free products must be provided if isfreeProducts is true" });
+            }
+        }
+
+        // Validate top-level comments (optional, but must be an array if provided)
+        if (comments && !Array.isArray(comments)) {
+            return res.status(400).json({ error: "Top-level comments must be an array" });
+        }
+        const formattedComments = (comments || []).map(comment => ({
+            message: comment.message || String(comment),
+            date: comment.date || Date.now()
+        }));
 
         // Generate unique Order ID
         const orderId = await generateOrderId();
 
         // Create and save the order
-        const order = new Order({ ...req.body, orderId });
+        const order = new Order({ ...req.body, orderId, comments: formattedComments });
         await order.save();
 
-        res.json({ success: "Order added successfully", order });
-
+        res.status(201).json({ success: "Order added successfully", order });
     } catch (error) {
         console.error("Error creating order:", error);
         res.status(500).json({ error: error.message });
     }
 });
 
-// 🟢 UPDATE Order
+// UPDATE Order
 router.put('/orders', async (req, res) => {
     try {
         const { orderId, ...updates } = req.body;
 
         if (!orderId) return res.status(400).json({ error: "Order ID is required" });
 
-        // Find and update the order
         const order = await Order.findOneAndUpdate(
             { orderId },
-            { $set: updates }, // Prevents removing unspecified fields
+            { $set: updates },
             { new: true, runValidators: true }
         );
 
         if (!order) return res.status(404).json({ error: "Order not found" });
 
         res.json({ success: "Order updated successfully", order });
-
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// 🟢 SEARCH Orders
+// SEARCH Orders
 router.post('/orders/search', async (req, res) => {
     try {
         const { query } = req.body;
@@ -194,7 +202,7 @@ router.post('/orders/search', async (req, res) => {
     }
 });
 
-// 🟢 DELETE Order
+// DELETE Order
 router.delete('/orders', async (req, res) => {
     try {
         const { orderId } = req.body;
@@ -208,7 +216,6 @@ router.delete('/orders', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
 
 // Users
 router.get('/users', async (req, res) => {
