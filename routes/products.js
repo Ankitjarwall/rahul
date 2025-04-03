@@ -6,7 +6,7 @@ const Product = require('../models/Product');
 router.get('/', async (req, res) => {
     try {
         const products = await Product.find()
-            .select('productImage productName mrp rate');
+            .select('productId productImage productName mrp rate');
         res.json(products);
     } catch (error) {
         res.status(500).json({ error: error.message });

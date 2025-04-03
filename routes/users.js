@@ -6,7 +6,7 @@ const User = require('../models/User');
 router.get('/', async (req, res) => {
     try {
         const users = await User.find()
-            .select('name shopName town state contact');
+            .select('userId name shopName town state contact');
         res.json(users);
     } catch (error) {
         res.status(500).json({ error: error.message });

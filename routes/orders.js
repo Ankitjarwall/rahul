@@ -6,7 +6,7 @@ const Order = require('../models/Order');
 router.get('/', async (req, res) => {
     try {
         const orders = await Order.find()
-            .select('user.name user.shopName user.town user.state productDetails.name billing.totalAmount createdAt');
+            .select('orderId user.name user.shopName user.town user.state productDetails.name billing.totalAmount createdAt');
         res.json(orders);
     } catch (error) {
         res.status(500).json({ error: error.message });
