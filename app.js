@@ -5,6 +5,10 @@ const cors = require('cors');
 const userRoutes = require('./routes/users');
 const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
+const utilsRoutes = require('./routes/utils');
+//import logo from assests folder
+// import logo from './assets/logo.png'; 
+
 
 dotenv.config();
 
@@ -23,6 +27,7 @@ mongoose.connect(process.env.MONGO_URI)
 app.use('/api/users', userRoutes);
 app.use('/api/products', productRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/utils', utilsRoutes);
 
 // Root Route
 app.get('/', (req, res) => {
