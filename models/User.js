@@ -13,7 +13,7 @@ const userSchema = new mongoose.Schema({
     dues: Number,
     contact: [{
         contact_1: { type: String, required: true },
-        contact_2: { type: String, required: true }
+        contact_2: { type: String, required: false }
     }],
     comments: [{
         message: { type: String, default: "" },

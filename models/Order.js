@@ -16,7 +16,7 @@ const orderSchema = new mongoose.Schema({
         pincode: { type: Number, required: true },
         contact: [{
             contact_1: { type: String, required: true },
-            contact_2: { type: String, required: true }
+            contact_2: { type: String, required: false } // Changed to optional
         }],
         comments: [{
             message: { type: String, default: "" },
