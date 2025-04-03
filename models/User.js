@@ -11,6 +11,14 @@ const userSchema = new mongoose.Schema({
     pincode: String,
     delivery: Number,
     dues: Number,
+    orderHistory: [{
+        orderId: { type: String, required: true },
+        orderImage: { type: String, required: true },
+        orderName: { type: String, required: true },
+        orderStatus: { type: String, required: true },
+        orderAmount: { type: Number, required: true },
+        orderDate: { type: Date, default: Date.now },
+    }],
     contact: [{
         contact_1: { type: String, required: true },
         contact_2: { type: String, required: false }
@@ -21,6 +29,6 @@ const userSchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
-userSchema.index({ name: "text", shopName: "text" });
+userSchema.index({ name: "text", shopName: "text", state: "text" , town: "text",dues: "text"});
 
 module.exports = mongoose.model('User', userSchema);

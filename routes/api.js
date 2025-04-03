@@ -278,11 +278,12 @@ router.post('/products', async (req, res) => {
         const productData = {
             productId,
             productName: req.body.productName,
-            productImage: req.body.productImage.map(img => ({ image_1: img })),
+            productImage: req.body.productImage,
             productDescription: req.body.productDescription,
             productFeatures: req.body.productFeatures,
             howToUse: req.body.howToUse,
             precautions: req.body.precautions,
+            usersBuyed: req.body.usersBuyed,
             note: req.body.note,
             mrp: req.body.mrp,
             weight: req.body.weight,

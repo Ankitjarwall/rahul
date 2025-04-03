@@ -4,7 +4,7 @@ const productSchema = new mongoose.Schema({
     productId: { type: String, required: true, unique: true },
     productName: String,
     productImage: [{
-        image_1: { type: String, required: true },
+        image: { type: String, required: true },
     }],
     productDescription: [{
         title: { type: String, required: true },
@@ -21,6 +21,15 @@ const productSchema = new mongoose.Schema({
     }],
     note: [{
         note: { type: String, required: true }
+    }],
+    usersBuyed: [{
+        userId: { type: String, required: true },
+        userName: { type: String, required: true },
+        userShopName: { type: String, required: true },
+        userTown: { type: String, required: true },
+        userState: { type: String, required: true },
+        quandity: { type: Number, required: true },
+        orderId: { type: String, required: true },
     }],
     mrp: Number,
     weight: String,
