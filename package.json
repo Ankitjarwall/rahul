@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon app.js"
   },
   "repository": {
     "type": "git",
@@ -21,7 +21,9 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "html-pdf": "^3.0.1",
     "mongoose": "^8.13.1",
+    "nodemon": "^3.1.9",
     "pdfkit": "^0.16.0",
     "puppeteer": "^24.6.0",
     "svg-to-pdfkit": "^0.1.8",

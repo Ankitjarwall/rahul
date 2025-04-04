@@ -6,8 +6,6 @@ const userRoutes = require('./routes/users');
 const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const utilsRoutes = require('./routes/utils');
-//import logo from assests folder
-// import logo from './assets/logo.png'; 
 
 
 dotenv.config();
@@ -32,6 +30,11 @@ app.use('/api/utils', utilsRoutes);
 // Root Route
 app.get('/', (req, res) => {
     res.send("Welcome to the API");
+});
+// ✅ Add this to start the server on port 3000
+const PORT = process.env.PORT || 3001;
+app.listen(PORT, () => {
+    console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
 
 module.exports = app;
