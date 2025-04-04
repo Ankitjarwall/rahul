@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
-const PDFDocument = require('pdfkit');
-const SVGtoPDF = require('svg-to-pdfkit');
+const pdf = require('html-pdf');
 const fs = require('fs');
 const path = require('path');
 
