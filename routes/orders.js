@@ -92,13 +92,16 @@ router.post('/search', async (req, res) => {
 
 
 // GENERATE PDF INVOICE
+
+
+// GENERATE PDF INVOICE
 router.get('/invoice/:orderId', async (req, res) => {
     try {
         // Check dependencies
         if (!PDFDocument) throw new Error('PDFDocument is not available. Check pdfkit installation.');
         if (!SVGtoPDF) throw new Error('SVGtoPDF is not available. Check svg-to-pdfkit installation.');
 
-        // Check logo file
+        // Check logo file and load it early
         const logoPath = path.join(__dirname, '../assets/logo.svg');
         if (!fs.existsSync(logoPath)) {
             throw new Error(`Logo file not found at ${logoPath}`);
@@ -116,16 +119,37 @@ router.get('/invoice/:orderId', async (req, res) => {
             return res.status(404).json({ error: 'Order not found' });
         }
 
-        // Load logo as base64
-        const logoBase64 = fs.readFileSync(logoPath, 'base64');
-        const logoDataUri = `data:image/svg+xml;base64,${logoBase64}`;
+        // Check for preview mode (for development)
+        const isPreview = req.query.preview === 'true';
 
-        // HTML Template (editable)
+        // Set response headers
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', isPreview ? 'inline' : `attachment; filename=invoice-${order.orderId}.pdf`);
+
+        // Create PDF document
+        const doc = new PDFDocument({ size: 'A4', margin: 40 });
+
+        // Handle stream errors
+        doc.on('error', (err) => {
+            console.error('PDF Stream Error:', err);
+            if (!res.headersSent) {
+                res.status(500).json({ error: 'Failed to generate PDF' });
+            }
+        });
+
+        res.on('error', (err) => {
+            console.error('Response Stream Error:', err);
+        });
+
+        // Pipe PDF to response
+        doc.pipe(res);
+
+        // HTML Template (editable) - For reference and styling inspiration
         const htmlTemplate = `
             <div style="font-family: Arial, sans-serif; color: #2c3e50; max-width: 800px; margin: 40px;">
                 <!-- Header -->
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <img src="${logoDataUri}" style="width: 100px; height: auto;" />
+                    <img src="data:image/svg+xml;base64,${fs.readFileSync(logoPath, 'base64')}" style="width: 100px; height: auto;" />
                     <h1 style="font-size: 24px; margin: 10px 0 5px;">MacBease Connections Private Limited</h1>
                     <p style="font-size: 12px; color: #7f8c8d; margin: 0;">Be connected with each other</p>
                 </div>
@@ -236,15 +260,7 @@ router.get('/invoice/:orderId', async (req, res) => {
             </div>
         `;
 
-        // Set response headers
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
-
-        // Create PDF document
-        const doc = new PDFDocument({ size: 'A4', margin: 40 });
-        doc.pipe(res);
-
-        // Parse HTML manually (simplified approach)
+        // Render PDF with pdfkit
         let y = 40; // Starting Y position
 
         // Header
@@ -386,4 +402,5 @@ router.get('/invoice/:orderId', async (req, res) => {
         }
     }
 });
+
 module.exports = router;
