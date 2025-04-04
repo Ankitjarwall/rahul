@@ -4,6 +4,7 @@ const Order = require('../models/Order');
 const pdf = require('html-pdf');
 const fs = require('fs');
 const path = require('path');
+const puppeteer = require('puppeteer');
 
 // GET all orders (limited fields for main page)
 router.get('/', async (req, res) => {
