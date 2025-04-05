@@ -7,7 +7,6 @@ const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
 const utilsRoutes = require('./routes/utils');
 
-
 dotenv.config();
 
 const app = express();
@@ -32,7 +31,7 @@ app.get('/', (req, res) => {
     res.send("Welcome to the API");
 });
 // ✅ Add this to start the server on port 3000
-const PORT = process.env.PORT || 3001;
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });

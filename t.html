@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dunga Sai Enterprises - Invoice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        .invoice-container {
+            max-width: 800px;
+            margin: 0 auto;
+            border: 1px solid #eee;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .contact-info {
+            margin-bottom: 20px;
+        }
+
+        hr {
+            border: none;
+            border-top: 1px solid #eee;
+            margin: 20px 0;
+        }
+
+        .invoice-date {
+            margin-bottom: 20px;
+        }
+
+        .billed-to {
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        th,
+        td {
+            padding: 10px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            font-weight: bold;
+        }
+
+        .totals {
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        .totals tr:last-child td {
+            font-weight: bold;
+            border-top: 1px solid #eee;
+            border-bottom: none;
+        }
+
+        .footer {
+            margin-top: 30px;
+            text-align: center;
+        }
+
+        .bank-details {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+
+        .bank-details p {
+            margin: 5px 0;
+        }
+
+        .thank-you {
+            margin: 20px 0;
+            font-style: italic;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="invoice-container">
+        <div class="header">
+            <div class="company-name">Dunga Sai Enterprises</div>
+            <div class="contact-info">
+                durgasaienterprises@email.com<br>
+                +91 98765 43213
+            </div>
+        </div>
+
+        <hr>
+
+        <div class="invoice-date">
+            <strong>INVOICE DATE</strong><br>
+            <strong>04.04.2025</strong>
+        </div>
+
+        <hr>
+
+        <div class="billed-to">
+            <strong>BILLED TO</strong><br>
+            <strong>Shop Name</strong><br>
+            User shop address<br>
+            City, Country - 00000<br>
+            +91 92345 67897
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Product Name</th>
+                    <th>Mrp</th>
+                    <th>Rate</th>
+                    <th>Qty</th>
+                    <th>Line total</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Head and soluder</strong></td>
+                    <td>₹150.00</td>
+                    <td>₹100.00</td>
+                    <td>2</td>
+                    <td>₹200.00</td>
+                </tr>
+                <tr>
+                    <td><strong>Skin care</strong></td>
+                    <td>₹120.00</td>
+                    <td>₹100.00</td>
+                    <td>2</td>
+                    <td>₹200.00</td>
+                </tr>
+                <tr>
+                    <td><strong>Hair colour</strong></td>
+                    <td>₹100.00</td>
+                    <td>₹100.00</td>
+                    <td>2</td>
+                    <td>₹200.00</td>
+                </tr>
+                <tr>
+                    <td><strong>Head and soluder</strong></td>
+                    <td>₹150.00</td>
+                    <td>₹100.00</td>
+                    <td>2</td>
+                    <td>₹000.00</td>
+                </tr>
+                <tr>
+                    <td><strong>Skin care</strong></td>
+                    <td>₹120.00</td>
+                    <td>₹100.00</td>
+                    <td>2</td>
+                    <td>₹000.00</td>
+                </tr>
+                <tr>
+                    <td><strong>Hair colour</strong></td>
+                    <td>₹100.00</td>
+                    <td>₹100.00</td>
+                    <td>2</td>
+                    <td>₹000.00</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <table class="totals">
+            <tr>
+                <td><strong>Subtotal</strong></td>
+                <td>₹600.00</td>
+            </tr>
+            <tr>
+                <td><strong>Tax (0%)</strong></td>
+                <td>₹0.00</td>
+            </tr>
+            <tr>
+                <td><strong>Total</strong></td>
+                <td>₹600.00</td>
+            </tr>
+            <tr>
+                <td><strong>Amount due</strong></td>
+                <td><strong>RS ₹ 600.00</strong></td>
+            </tr>
+        </table>
+
+        <div class="thank-you">
+            <strong>Thank you for the business!</strong><br>
+            Please pay within 15 days of receiving this invoice.
+        </div>
+
+        <hr>
+
+        <div class="bank-details">
+            <strong>Bank details</strong><br>
+            <p>IFS code</p>
+            <p>Swift code</p>
+            <p>Account #</p>
+            <p>ABCD BANK</p>
+            <p>ABCD000XXXX</p>
+            <p>ABCDUSBBXXX</p>
+            <p>37474892300011</p>
+        </div>
+
+        <div class="footer">
+            <strong>Dunga Sai, Ent.</strong><br>
+            +91 92345 67897<br>
+            durgasaienterprises@email.com
+        </div>
+    </div>
+
+    <script>
+        // You can add JavaScript functionality here if needed
+        // For example, to calculate totals dynamically or add print functionality
+        document.addEventListener('DOMContentLoaded', function () {
+            // Example: Add print button functionality
+            const printButton = document.createElement('button');
+            printButton.textContent = 'Print Invoice';
+            printButton.style.display = 'block';
+            printButton.style.margin = '20px auto';
+            printButton.style.padding = '10px 20px';
+            printButton.style.backgroundColor = '#4CAF50';
+            printButton.style.color = 'white';
+            printButton.style.border = 'none';
+            printButton.style.borderRadius = '4px';
+            printButton.style.cursor = 'pointer';
+
+            printButton.addEventListener('click', function () {
+                window.print();
+            });
+
+            document.body.insertBefore(printButton, document.querySelector('.invoice-container'));
+        });
+    </script>
+</body>
+
+</html>
