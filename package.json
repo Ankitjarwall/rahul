@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "dev": "nodemon --legacy-watch app.js"
+    "dev": "nodemon app.js"
   },
   "repository": {
     "type": "git",
