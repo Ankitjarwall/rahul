@@ -1,10 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
-const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
-
+const axios = require('axios');
 
 // GET all orders (limited fields for main page)
 router.get('/', async (req, res) => {
@@ -90,6 +89,15 @@ router.post('/search', async (req, res) => {
 });
 
 // GENERATE PDF INVOICE
+
+function convertToDownloadUrl(driveLink) {
+    const fileIdMatch = driveLink.match(/\/d\/(.+?)\//);
+    if (!fileIdMatch) throw new Error("Invalid Google Drive link");
+
+    const fileId = fileIdMatch[1];
+    return `https://drive.google.com/uc?export=download&id=${fileId}`;
+}
+
 router.get('/invoice/:orderId', async (req, res) => {
     try {
         const order = await Order.findOne({ orderId: req.params.orderId });
@@ -97,299 +105,47 @@ router.get('/invoice/:orderId', async (req, res) => {
 
         const isPreview = req.query.preview === 'true';
 
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader(
-            'Content-Disposition',
-            isPreview ? 'inline' : `attachment; filename=invoice-${order.orderId}.pdf`
-        );
+        // Apps Script endpoint
+        const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbx_iJ6Xxd5AQ413NcKvDZ7t1A0SsUvyOt8CeXBQ06-8tjo65cR_voTWAWHt4o9T_ETHqQ/exec';
 
-        const doc = new PDFDocument({
-            size: 'A4',
-            margin: 40,
-            info: {
-                Title: `Invoice #${order.orderId}`,
-                Author: 'Durga Sai Enterprises',
-                Subject: 'Invoice',
-                Keywords: 'invoice, order, payment'
+        // Request to Apps Script
+        const response = await axios.post(appsScriptUrl, order, {
+            headers: {
+                'Content-Type': 'application/json'
             }
         });
 
-        // Register font that supports the ₹ symbol
-        const fontPath = path.join(process.cwd(), 'assets', 'fonts', 'DejaVuSans.ttf');
-        doc.registerFont('DejaVuSans', fontPath);
+        const { status, pdfLink, message } = response.data;
 
-        // Handle PDF errors
-        doc.on('error', (error) => {
-            if (!res.headersSent) {
-                res.status(500).json({ error: `Failed to generate PDF: ${error.message}` });
-            }
-        });
-
-        doc.pipe(res);
-
-        const logoPath = path.join(process.cwd(), 'assets', 'logo.png');
-        const currentDate = new Date().toLocaleDateString('en-GB', {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric'
-        }).replace(/\//g, '.');
-
-        renderHeader(doc, logoPath, order, currentDate);
-        const billingDetailsY = renderBillingDetails(doc, order);
-        const tableEndY = renderProductTable(doc, order, billingDetailsY + 20);
-        const totalSectionY = renderTotalSection(doc, order, tableEndY + 20);
-        renderFooter(doc, logoPath);
-
-        doc.end();
-    } catch (error) {
-        console.error('PDF Generation Error:', error);
-        if (!res.headersSent) {
-            res.status(500).json({ error: `Failed to generate PDF: ${error.message}` });
+        if (!pdfLink) {
+            return res.status(500).json({ error: message || 'PDF link missing' });
         }
+
+        if (isPreview) {
+            // Open in browser (Google Drive view)
+            return res.redirect(pdfLink);
+        } else {
+            // Download PDF (convert to direct download link)
+            const downloadUrl = convertToDownloadUrl(pdfLink);
+            const pdfResponse = await axios.get(downloadUrl, { responseType: 'arraybuffer' });
+
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader(
+                'Content-Disposition',
+                `attachment; filename=invoice-${order.orderId}.pdf`
+            );
+
+            return res.send(pdfResponse.data);
+        }
+
+    } catch (error) {
+        console.error('PDF Generation Error:', error.message);
+        if (error.response?.data) {
+            console.error('Apps Script Response:', error.response.data);
+        }
+        res.status(500).json({ error: `Failed to generate PDF: ${error.message}` });
     }
 });
 
-function renderHeader(doc, logoPath, order, currentDate) {
-    let y = 60;
-
-    if (fs.existsSync(logoPath)) {
-        try {
-            doc.image(logoPath, 40, y, { width: 80 });
-        } catch (error) {
-            console.error('Error loading header logo:', error);
-        }
-    }
-
-    doc.font('Helvetica-Bold')
-        .fontSize(20)
-        .text('Durga Sai Enterprises', 130, y);
-
-    doc.font('Helvetica')
-        .fontSize(10)
-        .text('durgasaienterprises@email.com', 130, y + 25)
-        .text('+91 98765 43213', 130, y + 40);
-
-    doc.font('Helvetica-Bold')
-        .fontSize(40)
-        .fillColor('#cccccc')
-        .text('Invoice', 400, y, { align: 'right' });
-
-    doc.fontSize(12)
-        .fillColor('#333333')
-        .text(`#${order.orderId}`, 400, y + 45, { align: 'right' });
-
-    doc.fontSize(10)
-        .text('INVOICE DATE', 400, y + 65, { align: 'right' })
-        .font('Helvetica-Bold')
-        .fontSize(12)
-        .text(currentDate, 400, y + 80, { align: 'right' });
-
-    return y + 100;
-}
-
-function renderBillingDetails(doc, order) {
-    const y = 160;
-
-    doc.font('Helvetica')
-        .fontSize(10)
-        .fillColor('#333333')
-        .text('BILLED TO', 40, y);
-
-    doc.font('Helvetica-Bold')
-        .fontSize(12)
-        .text(order.user.shopName, 40, y + 15);
-
-    doc.font('Helvetica')
-        .fontSize(10)
-        .text(order.user.address, 40, y + 30)
-        .text(`${order.user.town}, ${order.user.state} - ${order.user.pincode}`, 40, y + 45);
-
-    if (order.user.contact && order.user.contact.length > 0) {
-        doc.text(`+91 ${order.user.contact[0].contact_1}`, 40, y + 60);
-    }
-
-    const totalAmount = calculateTotalAmount(order);
-    doc.font('DejaVuSans')
-        .fontSize(14)
-        .fillColor('#FF0066')
-        .text(`₹${totalAmount.toFixed(2)} dues`, 400, y + 60, { align: 'right' });
-
-    return y + 80;
-}
-
-function renderProductTable(doc, order, startY) {
-    const y = startY;
-    const tableWidth = 520;
-    const columnWidths = {
-        name: 220,
-        mrp: 80,
-        rate: 80,
-        qty: 60,
-        total: 100
-    };
-
-    doc.fillColor('#F6F6F6')
-        .rect(40, y, tableWidth, 30)
-        .fill();
-
-    doc.fillColor('#333333')
-        .font('Helvetica-Bold')
-        .fontSize(10)
-        .text('Product Name', 50, y + 10)
-        .text('MRP', 40 + columnWidths.name + 10, y + 10, { align: 'right' })
-        .text('Rate', 40 + columnWidths.name + columnWidths.mrp + 10, y + 10, { align: 'right' })
-        .text('Qty', 40 + columnWidths.name + columnWidths.mrp + columnWidths.rate + 10, y + 10, { align: 'right' })
-        .text('Total', 40 + columnWidths.name + columnWidths.mrp + columnWidths.rate + columnWidths.qty + 10, y + 10, { align: 'right' });
-
-    let currentY = y + 30;
-
-    order.productDetails.forEach(product => {
-        const rowHeight = 20;
-        if (currentY + rowHeight > doc.page.height - 50) {
-            doc.addPage();
-            currentY = 40;
-        }
-
-        doc.font('Helvetica')
-            .fontSize(9)
-            .fillColor('#333333')
-            .text(product.name, 50, currentY + 5, { width: columnWidths.name - 10, align: 'left' })
-            .font('DejaVuSans')
-            .text(`₹${(product.rate + 20).toFixed(2)}`, 40 + columnWidths.name + 10, currentY + 5, { align: 'right' })
-            .text(`₹${product.rate.toFixed(2)}`, 40 + columnWidths.name + columnWidths.mrp + 10, currentY + 5, { align: 'right' })
-            .text(product.quantity.toString(), 40 + columnWidths.name + columnWidths.mrp + columnWidths.rate + 10, currentY + 5, { align: 'right' })
-            .text(`₹${product.totalAmount.toFixed(2)}`, 40 + columnWidths.name + columnWidths.mrp + columnWidths.rate + columnWidths.qty + 10, currentY + 5, { align: 'right' });
-
-        currentY += rowHeight;
-    });
-
-    return currentY;
-}
-
-function renderTotalSection(doc, order, startY) {
-    const y = startY;
-    const totalAmount = calculateTotalAmount(order);
-
-    doc.strokeColor('#EEEEEE')
-        .lineWidth(1)
-        .moveTo(350, y)
-        .lineTo(560, y)
-        .stroke();
-
-    doc.font('Helvetica')
-        .fontSize(10)
-        .fillColor('#333333')
-        .text('Subtotal', 350, y + 15)
-        .font('DejaVuSans')
-        .text(`₹${totalAmount.toFixed(2)}`, 480, y + 15);
-
-    doc.font('Helvetica')
-        .fontSize(10)
-        .fillColor('#333333')
-        .text('Tax (0%)', 350, y + 35)
-        .font('DejaVuSans')
-        .text('₹0.00', 480, y + 35);
-
-    doc.strokeColor('#DDDDDD')
-        .lineWidth(1)
-        .moveTo(350, y + 55)
-        .lineTo(560, y + 55)
-        .stroke();
-
-    doc.font('Helvetica')
-        .fontSize(12)
-        .fillColor('#333333')
-        .text('Total', 350, y + 70)
-        .font('DejaVuSans')
-        .text(`₹${totalAmount.toFixed(2)}`, 480, y + 70);
-
-    doc.font('Helvetica')
-        .fontSize(12)
-        .fillColor('#333333')
-        .text('Amount due', 350, y + 90)
-        .font('DejaVuSans')
-        .fontSize(14)
-        .text(`₹${totalAmount.toFixed(2)}`, 480, y + 90);
-
-    return y + 110;
-}
-
-function renderFooter(doc, logoPath) {
-    const y = 680;
-
-    doc.font('Helvetica-Oblique')
-        .fontSize(24)
-        .fillColor('#333333')
-        .text('Signature', 100, y);
-
-    doc.font('Helvetica-Bold')
-        .fontSize(11)
-        .fillColor('#333333')
-        .text('Thank you for the business!', 100, y + 40);
-
-    doc.font('Helvetica')
-        .fontSize(10)
-        .fillColor('#666666')
-        .text('Please pay within 15 days of receiving this invoice.', 100, y + 55);
-
-    const bankDetailsX = 450;
-    doc.font('Helvetica-Bold')
-        .fontSize(10)
-        .fillColor('#333333')
-        .text('Bank details', 500, y, { align: 'right' });
-
-    doc.font('Helvetica')
-        .fontSize(9)
-        .fillColor('#666666')
-        .text('ABCD BANK', 500, y + 15, { align: 'right' })
-        .text('ABCD000XXXX', 500, y + 30, { align: 'right' })
-        .text('ABCDUSBBXXX', 500, y + 45, { align: 'right' })
-        .text('37474892300011', 500, y + 60, { align: 'right' });
-
-    doc.font('Helvetica')
-        .fontSize(9)
-        .fillColor('#333333')
-        .text('IFS code', 420, y + 30, { align: 'right' })
-        .text('Swift code', 420, y + 45, { align: 'right' })
-        .text('Account #', 420, y + 60, { align: 'right' });
-
-    doc.fillColor('#F6F6F6')
-        .roundedRect(40, y + 90, 520, 40, 5)
-        .fill();
-
-    if (fs.existsSync(logoPath)) {
-        try {
-            doc.image(logoPath, 60, y + 100, { width: 20 });
-        } catch (error) {
-            console.error('Error loading footer logo:', error);
-        }
-    }
-
-    doc.font('Helvetica-Bold')
-        .fontSize(12)
-        .fillColor('#FF0066')
-        .text('Durga Sai, Ent.', 100, y + 105);
-
-    doc.font('Helvetica')
-        .fontSize(10)
-        .fillColor('#666666')
-        .text('+91 92345 67897', 250, y + 105);
-
-    doc.text('durgasaienterprises@email.com', 400, y + 105);
-}
-
-function calculateTotalAmount(order) {
-    if (order.billing && typeof order.billing.orderAmount === 'number') {
-        return order.billing.orderAmount;
-    }
-
-    if (order.productDetails && Array.isArray(order.productDetails)) {
-        return order.productDetails.reduce((total, product) => {
-            return total + (product.totalAmount || 0);
-        }, 0);
-    }
-
-    return 0;
-}
 
 module.exports = router;
