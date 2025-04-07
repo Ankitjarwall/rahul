@@ -21,11 +21,11 @@ const userSchema = new mongoose.Schema({
     }],
     contact: [{
         contact_1: {
-            type: String, required: true,
+            contact: { type: String, required: true },
             whatsapp: { type: Boolean, default: false }
         },
         contact_2: {
-            type: String, required: false,
+            contact: { type: String, required: true },
             whatsapp: { type: Boolean, default: false }
         }
     }],
