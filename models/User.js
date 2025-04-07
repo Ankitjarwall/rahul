@@ -20,8 +20,14 @@ const userSchema = new mongoose.Schema({
         orderDate: { type: Date, default: Date.now },
     }],
     contact: [{
-        contact_1: { type: String, required: true },
-        contact_2: { type: String, required: false }
+        contact_1: {
+            type: String, required: true,
+            whatsapp: { type: Boolean, default: false }
+        },
+        contact_2: {
+            type: String, required: false,
+            whatsapp: { type: Boolean, default: false }
+        }
     }],
     comments: [{
         message: { type: String, default: "" },
@@ -29,6 +35,6 @@ const userSchema = new mongoose.Schema({
     }]
 }, { timestamps: true });
 
-userSchema.index({ name: "text", shopName: "text", state: "text" , town: "text",dues: "text"});
+userSchema.index({ name: "text", shopName: "text", state: "text", town: "text", dues: "text" });
 
 module.exports = mongoose.model('User', userSchema);
