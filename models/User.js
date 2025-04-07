@@ -19,16 +19,12 @@ const userSchema = new mongoose.Schema({
         orderAmount: { type: Number, required: true },
         orderDate: { type: Date, default: Date.now },
     }],
-    contact: [{
-        contact_1: {
+    contact: [
+        {
             contact: { type: String, required: true },
-            whatsapp: { type: Boolean, default: false }
+            whatsapp: { type: Boolean, default: false },
         },
-        contact_2: {
-            contact: { type: String, required: true },
-            whatsapp: { type: Boolean, default: false }
-        }
-    }],
+    ],
     comments: [{
         message: { type: String, default: "" },
         date: { type: Date, default: Date.now }

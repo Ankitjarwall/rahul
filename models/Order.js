@@ -14,16 +14,12 @@ const orderSchema = new mongoose.Schema({
         town: { type: String, required: true },
         state: { type: String, required: true },
         pincode: { type: Number, required: true },
-        contact: [{
-            contact_1: {
-                type: String, required: true ,
-                whatsapp: { type: Boolean, default: false }
+        contact: [
+            {
+                contact: { type: String, required: true },
+                whatsapp: { type: Boolean, default: false },
             },
-            contact_2: {
-                type: String, required: false,
-                whatsapp: { type: Boolean, default: false }
-             }
-        }],
+        ],
         comments: [{
             message: { type: String, default: "" },
             date: { type: Date, default: Date.now }
