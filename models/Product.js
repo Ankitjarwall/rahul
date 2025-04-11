@@ -6,22 +6,11 @@ const productSchema = new mongoose.Schema({
     productImage: [{
         image: { type: String, required: true },
     }],
-    productDescription: [{
-        title: { type: String, required: true },
-        description: { type: String, required: true }
-    }],
-    productFeatures: [{
-        feature: { type: String, required: true }
-    }],
-    howToUse: [{
-        step: { type: String, required: true },
-    }],
-    precautions: [{
-        precaution: { type: String, required: true }
-    }],
-    note: [{
-        note: { type: String, required: true }
-    }],
+    productDescription: string,
+    productFeatures: string,
+    howToUse: string,
+    precautions: string,
+    note: string,
     usersBuyed: [{
         userId: { type: String, required: true },
         userName: { type: String, required: true },
