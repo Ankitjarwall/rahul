@@ -25,10 +25,7 @@ const userSchema = new mongoose.Schema({
             whatsapp: { type: Boolean, default: false },
         },
     ],
-    comments: [{
-        message: { type: String, default: "" },
-        date: { type: Date, default: Date.now }
-    }]
+    comments:String,
 }, { timestamps: true });
 
 userSchema.index({ name: "text", shopName: "text", state: "text", town: "text", dues: "text", contact: "text" });
