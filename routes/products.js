@@ -28,7 +28,7 @@ router.get('/:productId', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const count = await Product.countDocuments();
-        const namePart = (req.body.name || 'Unnamed').replace(/\s+/g, '').toLowerCase();
+        const namePart = (req.body.productName || 'Unnamed').replace(/\s+/g, '').toLowerCase();
         const productId = `${namePart}-${count + 1}`;
 
         const product = new Product({ ...req.body, productId });
