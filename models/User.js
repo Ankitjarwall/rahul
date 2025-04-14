@@ -21,8 +21,8 @@ const userSchema = new mongoose.Schema({
     }],
     contact: [
         {
-            contact: { type: String, required: false,default: "" },
-            whatsapp: { type: Boolean, default: ""},
+            contact: { type: String, required: false},
+            whatsapp: { type: Boolean},
         },
     ],
     comments:String,
