@@ -4,7 +4,7 @@ const router = express.Router();
 
 // Single utility route
 router.post('/', (req, res) => {
-    const { task, inputs, input } = req.body;
+    const { task, input_1, input_2, input } = req.body;
 
     if (!task) {
         return res.status(400).json({ error: "Task is required" });
@@ -13,17 +13,17 @@ router.post('/', (req, res) => {
     try {
         switch (task.toLowerCase()) {
             case 'add':
-                if (!Array.isArray(inputs) || inputs.length < 2) {
-                    return res.status(400).json({ error: "At least two values are required for addition" });
+                if (input_1 === undefined || input_2 === undefined) {
+                    return res.status(400).json({ error: "Two inputs are required for addition" });
                 }
-                const sum = inputs.reduce((acc, val) => acc + convertToNumber(val), 0);
+                const sum = convertToNumber(input_1) + convertToNumber(input_2);
                 return res.json({ result: sum });
 
             case 'multiply':
-                if (!Array.isArray(inputs) || inputs.length < 2) {
-                    return res.status(400).json({ error: "At least two values are required for multiplication" });
+                if (input_1 === undefined || input_2 === undefined) {
+                    return res.status(400).json({ error: "Two inputs are required for multiplication" });
                 }
-                const product = inputs.reduce((acc, val) => acc * convertToNumber(val), 1);
+                const product = convertToNumber(input_1) * convertToNumber(input_2);
                 return res.json({ result: product });
 
             case 'convert':
@@ -48,6 +48,7 @@ function convertToNumber(value) {
     }
     return num;
 }
+
 
 
 module.exports = router;
