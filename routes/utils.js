@@ -13,10 +13,10 @@ const convertToNumber = (value) => {
 
 // Single utility route
 router.post('/', (req, res) => {
-    const { task, inputs } = req.body;
+    const { task, inputs, input } = req.body;
 
-    if (!task || !inputs) {
-        return res.status(400).json({ error: "Task and inputs are required" });
+    if (!task) {
+        return res.status(400).json({ error: "Task is required" });
     }
 
     try {
@@ -26,16 +26,14 @@ router.post('/', (req, res) => {
                     return res.status(400).json({ error: "At least two values are required for addition" });
                 }
                 const sum = inputs.reduce((acc, val) => acc + convertToNumber(val), 0);
-                res.json({ result: sum });
-                break;
+                return res.json({ result: sum });
 
             case 'multiply':
                 if (!Array.isArray(inputs) || inputs.length < 2) {
                     return res.status(400).json({ error: "At least two values are required for multiplication" });
                 }
                 const product = inputs.reduce((acc, val) => acc * convertToNumber(val), 1);
-                res.json({ result: product });
-                break;
+                return res.json({ result: product });
 
             case 'convert':
                 if (input === undefined || input === null) {
@@ -45,11 +43,20 @@ router.post('/', (req, res) => {
                 return res.json({ convertedValue });
 
             default:
-                res.status(400).json({ error: "Invalid task. Use 'add', 'multiply', or 'convert'" });
+                return res.status(400).json({ error: "Invalid task. Use 'add', 'multiply', or 'convert'" });
         }
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
+function convertToNumber(value) {
+    const num = parseFloat(value);
+    if (isNaN(num)) {
+        throw new Error("Invalid number input");
+    }
+    return num;
+}
+
 
 module.exports = router;
