@@ -28,14 +28,18 @@ router.get('/:productId', async (req, res) => {
 router.post('/', async (req, res) => {
     try {
         const count = await Product.countDocuments();
-        const productId = String(count + 1);
+        const namePart = (req.body.name || 'Unnamed').replace(/\s+/g, '').toLowerCase();
+        const productId = `${namePart}-${count + 1}`;
+
         const product = new Product({ ...req.body, productId });
         await product.save();
+
         res.status(201).json({ success: 'Product added successfully', productId });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
+
 
 // UPDATE product
 router.put('/:productId', async (req, res) => {

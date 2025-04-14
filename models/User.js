@@ -21,13 +21,13 @@ const userSchema = new mongoose.Schema({
     }],
     contact: [
         {
-            contact: { type: String, required: false,default: "" },
+            contact: { type: String, required: false, default: "" },
             whatsapp: { type: Boolean, default: false },
         },
     ],
-    comments:String,
+    comments: String,
 }, { timestamps: true });
 
-userSchema.index({ name: "text", shopName: "text", state: "text", town: "text", dues: "text", contact: "text" });
+userSchema.index({ name: "text", shopName: "text", state: "text", town: "text", dues: "text", contact: "text", });
 
 module.exports = mongoose.model('User', userSchema);
