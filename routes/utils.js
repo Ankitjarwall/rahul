@@ -1,15 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-// Function to convert a string to a number
-const convertToNumber = (value) => {
-    if (typeof value === 'number') return value;
-    if (typeof value === 'string') {
-        const number = parseFloat(value.replace(/,/g, ''));
-        return isNaN(number) ? 0 : number;
-    }
-    return 0;
-};
 
 // Single utility route
 router.post('/', (req, res) => {
