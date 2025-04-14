@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
     contact: [
         {
             contact: { type: String, required: false,default: "" },
-            whatsapp: { type: Boolean, default: false },
+            whatsapp: { type: Boolean, default: ""},
         },
     ],
     comments:String,
