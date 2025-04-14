@@ -38,12 +38,11 @@ router.post('/', (req, res) => {
                 break;
 
             case 'convert':
-                if (!inputs.value) {
+                if (input === undefined || input === null) {
                     return res.status(400).json({ error: "A value is required for conversion" });
                 }
-                const convertedValue = convertToNumber(inputs.value);
-                res.json({ convertedValue });
-                break;
+                const convertedValue = convertToNumber(input);
+                return res.json({ convertedValue });
 
             default:
                 res.status(400).json({ error: "Invalid task. Use 'add', 'multiply', or 'convert'" });
