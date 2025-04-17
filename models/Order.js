@@ -20,10 +20,6 @@ const orderSchema = new mongoose.Schema({
                 whatsapp: { type: Boolean, default: false },
             },
         ],
-        comments: [{
-            message: { type: String, default: "" },
-            date: { type: Date, default: Date.now }
-        }]
     },
 
 
@@ -56,16 +52,13 @@ const orderSchema = new mongoose.Schema({
         paymentMethod: { type: String, required: true },
         moneyGiven: { type: Number, required: true },
         pastOrderDue: { type: Number, default: 0 },
-        paidAmount: { type: Number, default: 0 },
         finalAmount: { type: Number, required: true }
     },
-
-    isfreeProducts: { type: Boolean, default: false },
     comments: [{
         message: { type: String, default: "" },
         date: { type: Date, default: Date.now }
-    }]
-
+    }],
+    isfreeProducts: { type: Boolean, default: false },
 }, { timestamps: true });
 
 // Index for search functionality

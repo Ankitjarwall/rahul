@@ -46,6 +46,7 @@ router.post('/', async (req, res) => {
 
 // UPDATE user
 router.put('/:userId', async (req, res) => {
+    console.log("Received user data:", req.body);
     try {
         const user = await User.findOneAndUpdate(
             { userId: req.params.userId },

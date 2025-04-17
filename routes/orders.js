@@ -29,6 +29,7 @@ router.get('/:orderId', async (req, res) => {
 
 // ADD order
 router.post('/', async (req, res) => {
+    console.log("Received order data:", req.body); 
     try {
         const generateOrderId = async () => {
             const now = new Date();

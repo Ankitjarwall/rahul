@@ -11,21 +11,33 @@ const userSchema = new mongoose.Schema({
     pincode: String,
     delivery: Number,
     dues: Number,
-    orderHistory: [{
-        orderId: { type: String, required: true },
-        orderImage: { type: String, required: true },
-        orderName: { type: String, required: true },
-        orderStatus: { type: String, required: true },
-        orderAmount: { type: Number, required: true },
-        orderDate: { type: Date, default: Date.now },
-    }],
+    orderHistory_products:
+        [{
+            orderId: { type: String, required: true },
+            orderDate: { type: Date, default: Date.now },
+            orderImage: { type: String, required: true },
+            orderName: { type: String, required: true },
+            orderPaymentMethod: { type: String, required: true },
+            orderAmount: { type: Number, required: true },
+        }],
+    orderHistory_freeProducts:
+        [{
+            orderId: { type: String, required: true },
+            orderDate: { type: Date, default: Date.now },
+            orderImage: { type: String, required: true },
+            orderImage: { type: String, required: true },
+            orderName: { type: String, required: true },
+        }],
     contact: [
         {
             contact: { type: String, required: false, default: "" },
             whatsapp: { type: Boolean, default: false },
         },
     ],
-    comments: String,
+    comments: [{
+        message: { type: String, default: "" },
+        date: { type: Date, default: Date.now }
+    }],
 }, { timestamps: true });
 
 userSchema.index({ name: "text", shopName: "text", state: "text", town: "text", dues: "text", contact: "text", });
