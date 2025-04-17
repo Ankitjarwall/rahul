@@ -36,7 +36,7 @@ const userSchema = new mongoose.Schema({
     ],
     comments: [{
         message: { type: String, default: "" },
-        date: { type: Date, default: Date.now }
+        date: { type: String, default: "" }
     }],
 }, { timestamps: true });
 

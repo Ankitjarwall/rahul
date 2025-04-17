@@ -56,7 +56,7 @@ const orderSchema = new mongoose.Schema({
     },
     comments: [{
         message: { type: String, default: "" },
-        date: { type: Date, default: Date.now }
+        date: { type: String, default: "" }
     }],
     isfreeProducts: { type: Boolean, default: false },
 }, { timestamps: true });
