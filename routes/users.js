@@ -50,7 +50,6 @@ router.put('/:userId', async (req, res) => {
     console.log("Received user data:", req.body);
     try {
         const { comments, ...otherUpdates } = req.body; // Separate comments from other fields
-
         // Prepare the update object
         const update = { ...otherUpdates };
 

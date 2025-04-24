@@ -28,6 +28,7 @@ const orderSchema = new mongoose.Schema({
         name: { type: String, required: true },
         weight: { type: Number, required: true },
         unit: { type: String, required: true },
+        mrp: { type: Number, required: true },
         rate: { type: Number, required: true },
         quantity: { type: Number, required: true },
         totalAmount: { type: Number, required: true }
@@ -38,6 +39,7 @@ const orderSchema = new mongoose.Schema({
         name: { type: String, required: true, default: "NA" },
         weight: { type: Number, required: true, default: 0 },
         unit: { type: String, required: true, default: "NA" },
+        mrp: { type: Number, required: true },
         rate: { type: Number, required: true, default: 0 },
         quantity: { type: Number, required: true, default: 0 },
         totalAmount: { type: Number, required: true, default: 0 }

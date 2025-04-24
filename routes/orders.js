@@ -89,8 +89,8 @@ router.post('/search', async (req, res) => {
     }
 });
 
-// GENERATE PDF INVOICE
 
+// GENERATE PDF INVOICE
 function convertToDownloadUrl(driveLink) {
     const fileIdMatch = driveLink.match(/\/d\/(.+?)\//);
     if (!fileIdMatch) throw new Error("Invalid Google Drive link");
