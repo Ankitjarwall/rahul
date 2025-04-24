@@ -45,14 +45,26 @@ router.post('/', async (req, res) => {
 });
 
 // UPDATE user
+// UPDATE user
 router.put('/:userId', async (req, res) => {
     console.log("Received user data:", req.body);
     try {
+        const { comments, ...otherUpdates } = req.body; // Separate comments from other fields
+
+        // Prepare the update object
+        const update = { ...otherUpdates };
+
+        // If comments are provided, append them to the existing comments array
+        if (comments && Array.isArray(comments)) {
+            update.$push = { comments: { $each: comments } }; // Use $push to append new comments
+        }
+
         const user = await User.findOneAndUpdate(
             { userId: req.params.userId },
-            req.body,
+            update,
             { new: true }
         );
+
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json({ success: 'User updated successfully', user });
     } catch (error) {
