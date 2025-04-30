@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const Order = require('../models/Order');
+const UserHistory = require('../models/userHistory');
+const ProductHistory = require('../models/productHistory');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
@@ -29,7 +31,7 @@ router.get('/:orderId', async (req, res) => {
 
 // ADD order
 router.post('/', async (req, res) => {
-    console.log("Received order data:", req.body); 
+    console.log("Received order data:", req.body);
     try {
         const generateOrderId = async () => {
             const now = new Date();
@@ -44,6 +46,25 @@ router.post('/', async (req, res) => {
         const orderId = await generateOrderId();
         const order = new Order({ ...req.body, orderId });
         await order.save();
+
+        // Add UserHistory and ProductHistory entries for each product
+        const { user, productDetails } = req.body;
+        for (const product of productDetails) {
+            const userHistory = new UserHistory({
+                productId: product._id, // Assuming productDetails contains _id
+                userId: user.userId,
+                orderId: order._id
+            });
+            await userHistory.save();
+
+            const productHistory = new ProductHistory({
+                productId: product._id,
+                userId: user.userId,
+                orderId: order._id
+            });
+            await productHistory.save();
+        }
+
         res.status(201).json({ success: 'Order added successfully', order });
     } catch (error) {
         res.status(500).json({ error: error.message });
@@ -88,7 +109,6 @@ router.post('/search', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
 
 // GENERATE PDF INVOICE
 function convertToDownloadUrl(driveLink) {
@@ -147,6 +167,5 @@ router.get('/invoice/:orderId', async (req, res) => {
         res.status(500).json({ error: `Failed to generate PDF: ${error.message}` });
     }
 });
-
 
 module.exports = router;
