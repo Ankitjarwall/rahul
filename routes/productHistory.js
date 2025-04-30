@@ -14,8 +14,16 @@ const productHistorySchema = Joi.object({
 router.get('/', async (req, res) => {
     try {
         const histories = await ProductHistory.find()
-            .populate('userId', 'name shopName')
-            .populate('productId', 'productName')
+            .populate({
+                path: 'userId',
+                select: 'name shopName',
+                match: { userId: { $exists: true } }
+            })
+            .populate({
+                path: 'productId',
+                select: 'productName',
+                match: { productId: { $exists: true } }
+            })
             .populate('orderId', 'orderId billing.totalAmount');
         res.json(histories);
     } catch (error) {
@@ -27,8 +35,16 @@ router.get('/', async (req, res) => {
 router.get('/:productId', async (req, res) => {
     try {
         const histories = await ProductHistory.find({ productId: req.params.productId })
-            .populate('userId', 'name shopName')
-            .populate('productId', 'productName')
+            .populate({
+                path: 'userId',
+                select: 'name shopName',
+                match: { userId: { $exists: true } }
+            })
+            .populate({
+                path: 'productId',
+                select: 'productName',
+                match: { productId: { $exists: true } }
+            })
             .populate('orderId', 'orderId billing.totalAmount');
         if (!histories.length) return res.status(404).json({ error: 'No history found for this product' });
         res.json(histories);
@@ -46,8 +62,16 @@ router.post('/', async (req, res) => {
         const history = new ProductHistory(req.body);
         await history.save();
         const populatedHistory = await ProductHistory.findById(history._id)
-            .populate('userId', 'name shopName')
-            .populate('productId', 'productName')
+            .populate({
+                path: 'userId',
+                select: 'name shopName',
+                match: { userId: { $exists: true } }
+            })
+            .populate({
+                path: 'productId',
+                select: 'productName',
+                match: { productId: { $exists: true } }
+            })
             .populate('orderId', 'orderId billing.totalAmount');
         res.status(201).json({ success: 'Product history added', history: populatedHistory });
     } catch (error) {
@@ -62,8 +86,16 @@ router.put('/:id', async (req, res) => {
         if (error) return res.status(400).json({ error: error.details[0].message });
 
         const history = await ProductHistory.findByIdAndUpdate(req.params.id, req.body, { new: true })
-            .populate('userId', 'name shopName')
-            .populate('productId', 'productName')
+            .populate({
+                path: 'userId',
+                select: 'name shopName',
+                match: { userId: { $exists: true } }
+            })
+            .populate({
+                path: 'productId',
+                select: 'productName',
+                match: { productId: { $exists: true } }
+            })
             .populate('orderId', 'orderId billing.totalAmount');
         if (!history) return res.status(404).json({ error: 'Product history not found' });
         res.json({ success: 'Product history updated', history });

@@ -47,26 +47,30 @@ router.post('/', async (req, res) => {
         const order = new Order({ ...req.body, orderId });
         await order.save();
 
-        // Add UserHistory and ProductHistory entries for each product
+        // Add UserHistory and ProductHistory entries for each productmediator
         const { user, productDetails } = req.body;
         for (const product of productDetails) {
+            if (!product.productId) {
+                throw new Error('productId is required in productDetails');
+            }
             const userHistory = new UserHistory({
-                productId: product._id, // Assuming productDetails contains _id
-                userId: user.userId,
-                orderId: order._id
+                productId: product.productId, // Use productId from productDetails
+                userId: user.userId, // Use userId from user object
+                orderId: order._id // Use the saved order's _id
             });
             await userHistory.save();
 
             const productHistory = new ProductHistory({
-                productId: product._id,
-                userId: user.userId,
-                orderId: order._id
+                productId: product.productId, // Use productId from productDetails
+                userId: user.userId, // Use userId from user object
+                orderId: order._id // Use the saved order's _id
             });
             await productHistory.save();
         }
 
         res.status(201).json({ success: 'Order added successfully', order });
     } catch (error) {
+        console.error('Error creating order:', error);
         res.status(500).json({ error: error.message });
     }
 });
