@@ -1,11 +1,146 @@
 const express = require('express');
 const router = express.Router();
+const Joi = require('joi');
 const Order = require('../models/Order');
 const UserHistory = require('../models/userHistory');
 const ProductHistory = require('../models/productHistory');
+const Product = require('../models/Product');
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+
+// Validation schema for productDetails
+const productSchema = Joi.object({
+    productId: Joi.string().required(),
+    name: Joi.string().required(),
+    weight: Joi.number().positive().required().allow(Joi.string()), // Allow string for weight
+    unit: Joi.string().required(),
+    mrp: Joi.number().positive().required(),
+    rate: Joi.number().positive().required(),
+    quantity: Joi.number().integer().min(1).required(),
+    totalAmount: Joi.number().positive().required(),
+    item_total_weight: Joi.number().positive().optional(), // Allow optional field
+    image: Joi.string().uri().optional() // Allow optional image URL
+}).unknown(true); // Allow additional fields in productDetails
+
+// Validation schema for user.contact
+const contactSchema = Joi.object({
+    contact: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
+    whatsapp: Joi.boolean().default(false),
+    _id: Joi.string().optional() // Allow MongoDB _id
+}).unknown(true); // Allow additional fields in contact
+
+// Validation schema for billing
+const billingSchema = Joi.object({
+    orderWeight: Joi.number().positive().required(),
+    orderAmount: Joi.number().positive().required(),
+    deliveryCharges: Joi.number().min(0).required(),
+    totalAmount: Joi.number().positive().required(),
+    paymentMethod: Joi.string().required(),
+    moneyGiven: Joi.number().required().allow(Joi.string()), // Allow string like "0"
+    pastOrderDue: Joi.number().min(0).required(),
+    finalAmount: Joi.number().positive().required()
+}).unknown(true); // Allow additional fields in billing
+
+// Validation schema for freeProducts
+const freeProductSchema = Joi.object({
+    name: Joi.string().default('NA'),
+    weight: Joi.number().default(0),
+    unit: Joi.string().default('NA'),
+    mrp: Joi.number().required(),
+    rate: Joi.number().default(0),
+    quantity: Joi.number().default(0),
+    totalAmount: Joi.number().default(0)
+}).unknown(true);
+
+// Validation schema for comments
+const commentSchema = Joi.object({
+    message: Joi.string().default(''),
+    date: Joi.string().default('')
+}).unknown(true);
+
+// Validation schema for the entire order
+const orderSchema = Joi.object({
+    user: Joi.object({
+        userId: Joi.string().required(),
+        name: Joi.string().required(),
+        shopName: Joi.string().required(),
+        userDues: Joi.number().optional().allow(null), // Allow userDues
+        address: Joi.string().required(),
+        town: Joi.string().required(),
+        state: Joi.string().required(),
+        pincode: Joi.number().required().allow(Joi.string()), // Allow string for pincode
+        contact: Joi.array().items(contactSchema).optional()
+    }).unknown(true), // Allow additional fields in user
+    productDetails: Joi.array().items(productSchema).required().min(1),
+    freeProducts: Joi.array().items(freeProductSchema).optional(),
+    billing: billingSchema.required(),
+    isfreeProducts: Joi.boolean().optional(),
+    comments: Joi.array().items(commentSchema).optional()
+}).unknown(true); // Allow additional top-level fields
+
+// ADD order
+router.post('/', async (req, res) => {
+    console.log("Received order data:", JSON.stringify(req.body, null, 2)); // Log for debugging
+    try {
+        // Validate request body
+        const { error } = orderSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+        if (error) {
+            const errors = error.details.map(err => err.message);
+            return res.status(400).json({ error: 'Validation failed', details: errors });
+        }
+
+        // Generate unique orderId
+        const generateOrderId = async () => {
+            const now = new Date();
+            const day = String(now.getDate()).padStart(2, '0');
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const year = now.getFullYear();
+            const datePrefix = `${day}${month}${year}`;
+            const count = await Order.countDocuments({ orderId: { $regex: `^${datePrefix}` } });
+            return `${datePrefix}OR${count + 1}`;
+        };
+
+        const orderId = await generateOrderId();
+        const order = new Order({ ...req.body, orderId });
+        await order.save();
+
+        // Add UserHistory and ProductHistory entries for each product
+        const { user, productDetails } = req.body;
+        for (const product of productDetails) {
+            // Verify productId exists in Product collection
+            const productExists = await Product.findOne({ productId: product.productId });
+            if (!productExists) {
+                return res.status(400).json({ error: `Invalid productId: ${product.productId}` });
+            }
+
+            // Create UserHistory entry
+            const userHistory = new UserHistory({
+                productId: productExists._id, // Use MongoDB _id from Product
+                productName: product.name,
+                userShopName: user.shopName,
+                userId: user.userId,
+                orderId: order._id
+            });
+            await userHistory.save();
+
+            // Create ProductHistory entry
+            const productHistory = new ProductHistory({
+                productName: product.name,
+                productId: productExists._id, // Use MongoDB _id from Product
+                userId: user.userId,
+                userShopName: user.shopName,
+                orderId: order._id
+            });
+            await productHistory.save();
+        }
+
+        res.status(201).json({ success: 'Order added successfully', order });
+    } catch (error) {
+        console.error('Error creating order:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
 
 // GET all orders (limited fields for main page)
 router.get('/', async (req, res) => {
@@ -25,52 +160,6 @@ router.get('/:orderId', async (req, res) => {
         if (!order) return res.status(404).json({ error: 'Order not found' });
         res.json(order);
     } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// ADD order
-router.post('/', async (req, res) => {
-    console.log("Received order data:", req.body);
-    try {
-        const generateOrderId = async () => {
-            const now = new Date();
-            const day = String(now.getDate()).padStart(2, '0');
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const year = now.getFullYear();
-            const datePrefix = `${day}${month}${year}`;
-            const count = await Order.countDocuments({ orderId: { $regex: `^${datePrefix}` } });
-            return `${datePrefix}OR${count + 1}`;
-        };
-
-        const orderId = await generateOrderId();
-        const order = new Order({ ...req.body, orderId });
-        await order.save();
-
-        // Add UserHistory and ProductHistory entries for each productmediator
-        const { user, productDetails } = req.body;
-        for (const product of productDetails) {
-            if (!product.productId) {
-                throw new Error('productId is required in productDetails');
-            }
-            const userHistory = new UserHistory({
-                productId: product.productId, // Use productId from productDetails
-                userId: user.userId, // Use userId from user object
-                orderId: order._id // Use the saved order's _id
-            });
-            await userHistory.save();
-
-            const productHistory = new ProductHistory({
-                productId: product.productId, // Use productId from productDetails
-                userId: user.userId, // Use userId from user object
-                orderId: order._id // Use the saved order's _id
-            });
-            await productHistory.save();
-        }
-
-        res.status(201).json({ success: 'Order added successfully', order });
-    } catch (error) {
-        console.error('Error creating order:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -118,7 +207,6 @@ router.post('/search', async (req, res) => {
 function convertToDownloadUrl(driveLink) {
     const fileIdMatch = driveLink.match(/\/d\/(.+?)\//);
     if (!fileIdMatch) throw new Error("Invalid Google Drive link");
-
     const fileId = fileIdMatch[1];
     return `https://drive.google.com/uc?export=download&id=${fileId}`;
 }
@@ -129,40 +217,26 @@ router.get('/invoice/:orderId', async (req, res) => {
         if (!order) return res.status(404).json({ error: 'Order not found' });
 
         const isPreview = req.query.preview === 'true';
-
-        // Apps Script endpoint
         const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbx_iJ6Xxd5AQ413NcKvDZ7t1A0SsUvyOt8CeXBQ06-8tjo65cR_voTWAWHt4o9T_ETHqQ/exec';
 
-        // Request to Apps Script
         const response = await axios.post(appsScriptUrl, order, {
-            headers: {
-                'Content-Type': 'application/json'
-            }
+            headers: { 'Content-Type': 'application/json' }
         });
 
         const { status, pdfLink, message } = response.data;
-
         if (!pdfLink) {
             return res.status(500).json({ error: message || 'PDF link missing' });
         }
 
         if (isPreview) {
-            // Open in browser (Google Drive view)
             return res.redirect(pdfLink);
         } else {
-            // Download PDF (convert to direct download link)
             const downloadUrl = convertToDownloadUrl(pdfLink);
             const pdfResponse = await axios.get(downloadUrl, { responseType: 'arraybuffer' });
-
             res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader(
-                'Content-Disposition',
-                `attachment; filename=invoice-${order.orderId}.pdf`
-            );
-
+            res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
             return res.send(pdfResponse.data);
         }
-
     } catch (error) {
         console.error('PDF Generation Error:', error.message);
         if (error.response?.data) {

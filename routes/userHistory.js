@@ -1,53 +1,42 @@
 const express = require('express');
 const router = express.Router();
-const Joi = require('joi');
 const UserHistory = require('../models/userHistory');
+const Joi = require('joi');
+const Product = require('../models/Product');
+const User = require('../models/User');
 
-// Validation schema for POST and PUT requests
+// Validation schema for UserHistory
 const userHistorySchema = Joi.object({
-    productId: Joi.string().required(),
+    productId: Joi.string().required(), // Expects Product.productId
+    productName: Joi.string().optional(),
+    userShopName: Joi.string().required(),
     userId: Joi.string().required(),
-    orderId: Joi.string().required()
-});
+    orderId: Joi.string().required() // Expects Order._id as string
+}).unknown(true);
 
-// GET all user history entries
+// GET all user history entries (limited fields)
 router.get('/', async (req, res) => {
     try {
         const histories = await UserHistory.find()
-            .populate({
-                path: 'userId',
-                select: 'name shopName',
-                match: { userId: { $exists: true } } // Match documents with userId
-            })
-            .populate({
-                path: 'productId',
-                select: 'productName',
-                match: { productId: { $exists: true } }
-            })
-            .populate('orderId', 'orderId billing.totalAmount');
+            .populate('productId', 'productId productName')
+            .populate('userId', 'userId name shopName')
+            .populate('orderId', 'orderId')
+            .select('productName userShopName createdAt');
         res.json(histories);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
 });
 
-// GET user history for a specific user
-router.get('/:userId', async (req, res) => {
+// GET specific user history entry
+router.get('/:id', async (req, res) => {
     try {
-        const histories = await UserHistory.find({ userId: req.params.userId })
-            .populate({
-                path: 'userId',
-                select: 'name shopName',
-                match: { userId: { $exists: true } }
-            })
-            .populate({
-                path: 'productId',
-                select: 'productName',
-                match: { productId: { $exists: true } }
-            })
-            .populate('orderId', 'orderId billing.totalAmount');
-        if (!histories.length) return res.status(404).json({ error: 'No history found for this user' });
-        res.json(histories);
+        const history = await UserHistory.findById(req.params.id)
+            .populate('productId', 'productId productName')
+            .populate('userId', 'userId name shopName')
+            .populate('orderId', 'orderId');
+        if (!history) return res.status(404).json({ error: 'User history entry not found' });
+        res.json(history);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -56,24 +45,33 @@ router.get('/:userId', async (req, res) => {
 // ADD user history entry
 router.post('/', async (req, res) => {
     try {
-        const { error } = userHistorySchema.validate(req.body);
-        if (error) return res.status(400).json({ error: error.details[0].message });
+        const { error } = userHistorySchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            const errors = error.details.map(err => err.message);
+            return res.status(400).json({ error: 'Validation failed', details: errors });
+        }
 
-        const history = new UserHistory(req.body);
+        // Verify productId exists
+        const product = await Product.findOne({ productId: req.body.productId });
+        if (!product) {
+            return res.status(400).json({ error: `Invalid productId: ${req.body.productId}` });
+        }
+
+        // Verify userId exists
+        const user = await User.findOne({ userId: req.body.userId });
+        if (!user) {
+            return res.status(400).json({ error: `Invalid userId: ${req.body.userId}` });
+        }
+
+        const history = new UserHistory({
+            productId: product._id,
+            productName: req.body.productName || product.productName,
+            userShopName: req.body.userShopName,
+            userId: req.body.userId,
+            orderId: req.body.orderId
+        });
         await history.save();
-        const populatedHistory = await UserHistory.findById(history._id)
-            .populate({
-                path: 'userId',
-                select: 'name shopName',
-                match: { userId: { $exists: true } }
-            })
-            .populate({
-                path: 'productId',
-                select: 'productName',
-                match: { productId: { $exists: true } }
-            })
-            .populate('orderId', 'orderId billing.totalAmount');
-        res.status(201).json({ success: 'User history added', history: populatedHistory });
+        res.status(201).json({ success: 'User history entry added successfully', history });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -82,23 +80,37 @@ router.post('/', async (req, res) => {
 // UPDATE user history entry
 router.put('/:id', async (req, res) => {
     try {
-        const { error } = userHistorySchema.validate(req.body);
-        if (error) return res.status(400).json({ error: error.details[0].message });
+        const { error } = userHistorySchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            const errors = error.details.map(err => err.message);
+            return res.status(400).json({ error: 'Validation failed', details: errors });
+        }
 
-        const history = await UserHistory.findByIdAndUpdate(req.params.id, req.body, { new: true })
-            .populate({
-                path: 'userId',
-                select: 'name shopName',
-                match: { userId: { $exists: true } }
-            })
-            .populate({
-                path: 'productId',
-                select: 'productName',
-                match: { productId: { $exists: true } }
-            })
-            .populate('orderId', 'orderId billing.totalAmount');
-        if (!history) return res.status(404).json({ error: 'User history not found' });
-        res.json({ success: 'User history updated', history });
+        // Verify productId exists
+        const product = await Product.findOne({ productId: req.body.productId });
+        if (!product) {
+            return res.status(400).json({ error: `Invalid productId: ${req.body.productId}` });
+        }
+
+        // Verify userId exists
+        const user = await User.findOne({ userId: req.body.userId });
+        if (!user) {
+            return res.status(400).json({ error: `Invalid userId: ${req.body.userId}` });
+        }
+
+        const history = await UserHistory.findByIdAndUpdate(
+            req.params.id,
+            {
+                productId: product._id,
+                productName: req.body.productName || product.productName,
+                userShopName: req.body.userShopName,
+                userId: req.body.userId,
+                orderId: req.body.orderId
+            },
+            { new: true }
+        );
+        if (!history) return res.status(404).json({ error: 'User history entry not found' });
+        res.json({ success: 'User history entry updated successfully', history });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
@@ -108,32 +120,8 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
     try {
         const history = await UserHistory.findByIdAndDelete(req.params.id);
-        if (!history) return res.status(404).json({ error: 'User history not found' });
-        res.json({ success: 'User history deleted' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// SEARCH user history
-router.post('/search', async (req, res) => {
-    try {
-        const { query } = req.body;
-        if (!query) return res.status(400).json({ error: 'No search query provided' });
-        // Note: Text search requires populated fields or additional indexes
-        const histories = await UserHistory.find()
-            .populate({
-                path: 'userId',
-                select: 'name shopName',
-                match: { $text: { $search: query } }
-            })
-            .populate({
-                path: 'productId',
-                select: 'productName',
-                match: { $text: { $search: query } }
-            })
-            .populate('orderId', 'orderId billing.totalAmount');
-        res.json(histories.filter(h => h.userId || h.productId)); // Only return populated results
+        if (!history) return res.status(404).json({ error: 'User history entry not found' });
+        res.json({ success: 'User history entry deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
