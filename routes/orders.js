@@ -5,13 +5,14 @@ const Order = require('../models/Order');
 const UserHistory = require('../models/userHistory');
 const ProductHistory = require('../models/productHistory');
 const Product = require('../models/Product');
+const User = require('../models/User'); // Added User import
 const axios = require('axios');
 
 // Validation schema for productDetails
 const productSchema = Joi.object({
     productId: Joi.string().required(),
     name: Joi.string().required(),
-    weight: Joi.number().positive().required(),
+    weight: Joi.number().positive().required(), // Enforce number
     unit: Joi.string().required(),
     mrp: Joi.number().positive().required(),
     rate: Joi.number().positive().required(),
@@ -35,7 +36,7 @@ const billingSchema = Joi.object({
     deliveryCharges: Joi.number().min(0).required(),
     totalAmount: Joi.number().positive().required(),
     paymentMethod: Joi.string().required(),
-    moneyGiven: Joi.number().required(),
+    moneyGiven: Joi.number().required(), // Enforce number
     pastOrderDue: Joi.number().min(0).required(),
     finalAmount: Joi.number().positive().required()
 }).unknown(true);
@@ -67,7 +68,7 @@ const orderSchema = Joi.object({
         address: Joi.string().required(),
         town: Joi.string().required(),
         state: Joi.string().required(),
-        pincode: Joi.number().required(),
+        pincode: Joi.number().required(), // Enforce number
         contact: Joi.array().items(contactSchema).optional()
     }).unknown(true),
     productDetails: Joi.array().items(productSchema).required().min(1),
@@ -81,17 +82,33 @@ const orderSchema = Joi.object({
 router.post('/', async (req, res) => {
     console.log("Received order data:", JSON.stringify(req.body, null, 2));
     try {
+        // Coerce string inputs to numbers
+        const data = { ...req.body };
+        if (data.user && typeof data.user.pincode === 'string') {
+            data.user.pincode = parseInt(data.user.pincode, 10);
+        }
+        if (data.billing && typeof data.billing.moneyGiven === 'string') {
+            data.billing.moneyGiven = parseFloat(data.billing.moneyGiven);
+        }
+        if (data.productDetails) {
+            data.productDetails = data.productDetails.map(product => ({
+                ...product,
+                weight: typeof product.weight === 'string' ? parseFloat(product.weight) : product.weight
+            }));
+        }
+
         // Validate request body
-        const { error } = orderSchema.validate(req.body, { abortEarly: false });
+        const { error } = orderSchema.validate(data, { abortEarly: false });
         if (error) {
             const errors = error.details.map(err => err.message);
+            console.error('Validation errors:', errors);
             return res.status(400).json({ error: 'Validation failed', details: errors });
         }
 
         // Verify user exists
-        const user = await User.findOne({ userId: req.body.user.userId });
+        const user = await User.findOne({ userId: data.user.userId });
         if (!user) {
-            return res.status(400).json({ error: `Invalid userId: ${req.body.user.userId}` });
+            return res.status(400).json({ error: `Invalid userId: ${data.user.userId}` });
         }
 
         // Generate unique orderId
@@ -106,11 +123,11 @@ router.post('/', async (req, res) => {
         };
 
         const orderId = await generateOrderId();
-        const order = new Order({ ...req.body, orderId });
+        const order = new Order({ ...data, orderId });
         await order.save();
 
         // Add UserHistory and ProductHistory entries for each product
-        const { productDetails } = req.body;
+        const { productDetails } = data;
         for (const product of productDetails) {
             // Verify productId exists in Product collection
             const productExists = await Product.findOne({ productId: product.productId });
@@ -171,20 +188,37 @@ router.get('/:orderId', async (req, res) => {
 // UPDATE order
 router.put('/:orderId', async (req, res) => {
     try {
-        const { error } = orderSchema.validate(req.body, { abortEarly: false });
+        // Coerce string inputs to numbers
+        const data = { ...req.body };
+        if (data.user && typeof data.user.pincode === 'string') {
+            data.user.pincode = parseInt(data.user.pincode, 10);
+        }
+        if (data.billing && typeof data.billing.moneyGiven === 'string') {
+            data.billing.moneyGiven = parseFloat(data.billing.moneyGiven);
+        }
+        if (data.productDetails) {
+            data.productDetails = data.productDetails.map(product => ({
+                ...product,
+                weight: typeof product.weight === 'string' ? parseFloat(product.weight) : product.weight
+            }));
+        }
+
+        const { error } = orderSchema.validate(data, { abortEarly: false });
         if (error) {
             const errors = error.details.map(err => err.message);
+            console.error('Validation errors:', errors);
             return res.status(400).json({ error: 'Validation failed', details: errors });
         }
 
         const order = await Order.findOneAndUpdate(
             { orderId: req.params.orderId },
-            req.body,
+            data,
             { new: true }
         );
         if (!order) return res.status(404).json({ error: 'Order not found' });
         res.json({ success: 'Order updated successfully', order });
     } catch (error) {
+        console.error('Error updating order:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -194,11 +228,12 @@ router.delete('/:orderId', async (req, res) => {
     try {
         const order = await Order.findOneAndDelete({ orderId: req.params.orderId });
         if (!order) return res.status(404).json({ error: 'Order not found' });
-        // Optionally delete related history entries
+        // Delete related history entries
         await UserHistory.deleteMany({ orderId: order._id });
         await ProductHistory.deleteMany({ orderId: order._id });
         res.json({ success: 'Order deleted successfully' });
     } catch (error) {
+        console.error('Error deleting order:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -212,6 +247,7 @@ router.post('/search', async (req, res) => {
             .select('user.name user.shopName user.town user.state productDetails.name billing.totalAmount createdAt');
         res.json(orders);
     } catch (error) {
+        console.error('Error searching orders:', error);
         res.status(500).json({ error: error.message });
     }
 });
