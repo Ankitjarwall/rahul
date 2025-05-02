@@ -167,38 +167,36 @@ router.delete('/:id', async (req, res) => {
     }
 });
 
-// SEARCH product history by userId and/or productId
+// SEARCH product history entries by productId
 router.post('/search', async (req, res) => {
     try {
         const { error } = searchSchema.validate(req.body, { abortEarly: false });
         if (error) {
             const errors = error.details.map(err => err.message);
+            console.error('Validation errors:', errors);
             return res.status(400).json({ error: 'Validation failed', details: errors });
         }
 
-        const { userId, productId } = req.body;
+        const { productId } = req.body;
         const query = {};
-
-        if (userId) {
-            const user = await User.findOne({ userId });
-            if (!user) return res.status(400).json({ error: `Invalid userId: ${userId}` });
-            query.userId = user._id;
-        }
 
         if (productId) {
             const product = await Product.findOne({ productId });
+            console.log('Found product:', product);
             if (!product) return res.status(400).json({ error: `Invalid productId: ${productId}` });
             query.productId = product._id;
         }
 
         const histories = await ProductHistory.find(query)
-            .populate('productId', 'productId productName')
+            .populate('productId', 'productId productName productImage') // Added productImage
             .populate('userId', 'userId name shopName')
             .populate('orderId', 'orderId')
             .select('productName userShopName createdAt');
 
+        console.log('Found histories:', histories);
         res.json(histories);
     } catch (error) {
+        console.error('Error in POST /api/product-history/search:', error);
         res.status(500).json({ error: error.message });
     }
 });
