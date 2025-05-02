@@ -48,7 +48,7 @@ router.get('/', async (req, res) => {
             }
 
             const histories = await UserHistory.find(query)
-                .populate('productId', 'productId productName')
+                .populate('productId', 'productId productName productImage') // Added productImage
                 .populate('userId', 'userId name shopName')
                 .populate('orderId', 'orderId')
                 .select('productName userShopName createdAt');
@@ -58,7 +58,7 @@ router.get('/', async (req, res) => {
 
         // If no query parameters, return all entries
         const histories = await UserHistory.find()
-            .populate('productId', 'productId productName')
+            .populate('productId', 'productId productName productImage') // Added productImage
             .populate('userId', 'userId name shopName')
             .populate('orderId', 'orderId')
             .select('productName userShopName createdAt');
@@ -72,7 +72,7 @@ router.get('/', async (req, res) => {
 router.get('/:id', async (req, res) => {
     try {
         const history = await UserHistory.findById(req.params.id)
-            .populate('productId', 'productId productName')
+            .populate('productId', 'productId productName productImage') // Added productImage
             .populate('userId', 'userId name shopName')
             .populate('orderId', 'orderId');
         if (!history) return res.status(404).json({ error: 'User history entry not found' });
@@ -192,7 +192,7 @@ router.post('/search', async (req, res) => {
         }
 
         const histories = await UserHistory.find(query)
-            .populate('productId', 'productId productName')
+            .populate('productId', 'productId productName productImage') // Added productImage
             .populate('userId', 'userId name shopName')
             .populate('orderId', 'orderId')
             .select('productName userShopName createdAt');
