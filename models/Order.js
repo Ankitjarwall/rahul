@@ -16,22 +16,23 @@ const orderSchema = new mongoose.Schema({
         pincode: { type: Number, required: true },
         contact: [
             {
-                contact: { type: String, required: false, default: "+91" },
-                whatsapp: { type: Boolean, default: false },
-            },
-        ],
+                contact: { type: String, required: true },
+                whatsapp: { type: Boolean, default: false }
+            }
+        ]
     },
-
 
     // Product Details
     productDetails: [{
+        productId: { type: String, required: true },
         name: { type: String, required: true },
         weight: { type: Number, required: true },
         unit: { type: String, required: true },
         mrp: { type: Number, required: true },
         rate: { type: Number, required: true },
         quantity: { type: Number, required: true },
-        totalAmount: { type: Number, required: true }
+        totalAmount: { type: Number, required: true },
+        image: { type: String, optional: true }
     }],
 
     // Free Products
@@ -60,7 +61,7 @@ const orderSchema = new mongoose.Schema({
         message: { type: String, default: "" },
         date: { type: String, default: "" }
     }],
-    isfreeProducts: { type: Boolean, default: false },
+    isfreeProducts: { type: Boolean, default: false }
 }, { timestamps: true });
 
 // Index for search functionality

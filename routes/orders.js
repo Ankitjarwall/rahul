@@ -5,30 +5,28 @@ const Order = require('../models/Order');
 const UserHistory = require('../models/userHistory');
 const ProductHistory = require('../models/productHistory');
 const Product = require('../models/Product');
-const fs = require('fs');
-const path = require('path');
 const axios = require('axios');
 
 // Validation schema for productDetails
 const productSchema = Joi.object({
     productId: Joi.string().required(),
     name: Joi.string().required(),
-    weight: Joi.number().positive().required().allow(Joi.string()), // Allow string for weight
+    weight: Joi.number().positive().required(),
     unit: Joi.string().required(),
     mrp: Joi.number().positive().required(),
     rate: Joi.number().positive().required(),
     quantity: Joi.number().integer().min(1).required(),
     totalAmount: Joi.number().positive().required(),
-    item_total_weight: Joi.number().positive().optional(), // Allow optional field
-    image: Joi.string().uri().optional() // Allow optional image URL
-}).unknown(true); // Allow additional fields in productDetails
+    item_total_weight: Joi.number().positive().optional(),
+    image: Joi.string().uri().optional()
+}).unknown(true);
 
 // Validation schema for user.contact
 const contactSchema = Joi.object({
     contact: Joi.string().pattern(/^\+?[1-9]\d{1,14}$/).required(),
     whatsapp: Joi.boolean().default(false),
-    _id: Joi.string().optional() // Allow MongoDB _id
-}).unknown(true); // Allow additional fields in contact
+    _id: Joi.string().optional()
+}).unknown(true);
 
 // Validation schema for billing
 const billingSchema = Joi.object({
@@ -37,10 +35,10 @@ const billingSchema = Joi.object({
     deliveryCharges: Joi.number().min(0).required(),
     totalAmount: Joi.number().positive().required(),
     paymentMethod: Joi.string().required(),
-    moneyGiven: Joi.number().required().allow(Joi.string()), // Allow string like "0"
+    moneyGiven: Joi.number().required(),
     pastOrderDue: Joi.number().min(0).required(),
     finalAmount: Joi.number().positive().required()
-}).unknown(true); // Allow additional fields in billing
+}).unknown(true);
 
 // Validation schema for freeProducts
 const freeProductSchema = Joi.object({
@@ -65,29 +63,35 @@ const orderSchema = Joi.object({
         userId: Joi.string().required(),
         name: Joi.string().required(),
         shopName: Joi.string().required(),
-        userDues: Joi.number().optional().allow(null), // Allow userDues
+        userDues: Joi.number().optional().allow(null),
         address: Joi.string().required(),
         town: Joi.string().required(),
         state: Joi.string().required(),
-        pincode: Joi.number().required().allow(Joi.string()), // Allow string for pincode
+        pincode: Joi.number().required(),
         contact: Joi.array().items(contactSchema).optional()
-    }).unknown(true), // Allow additional fields in user
+    }).unknown(true),
     productDetails: Joi.array().items(productSchema).required().min(1),
     freeProducts: Joi.array().items(freeProductSchema).optional(),
     billing: billingSchema.required(),
     isfreeProducts: Joi.boolean().optional(),
     comments: Joi.array().items(commentSchema).optional()
-}).unknown(true); // Allow additional top-level fields
+}).unknown(true);
 
 // ADD order
 router.post('/', async (req, res) => {
-    console.log("Received order data:", JSON.stringify(req.body, null, 2)); // Log for debugging
+    console.log("Received order data:", JSON.stringify(req.body, null, 2));
     try {
         // Validate request body
-        const { error } = orderSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
+        const { error } = orderSchema.validate(req.body, { abortEarly: false });
         if (error) {
             const errors = error.details.map(err => err.message);
             return res.status(400).json({ error: 'Validation failed', details: errors });
+        }
+
+        // Verify user exists
+        const user = await User.findOne({ userId: req.body.user.userId });
+        if (!user) {
+            return res.status(400).json({ error: `Invalid userId: ${req.body.user.userId}` });
         }
 
         // Generate unique orderId
@@ -106,7 +110,7 @@ router.post('/', async (req, res) => {
         await order.save();
 
         // Add UserHistory and ProductHistory entries for each product
-        const { user, productDetails } = req.body;
+        const { productDetails } = req.body;
         for (const product of productDetails) {
             // Verify productId exists in Product collection
             const productExists = await Product.findOne({ productId: product.productId });
@@ -116,19 +120,19 @@ router.post('/', async (req, res) => {
 
             // Create UserHistory entry
             const userHistory = new UserHistory({
-                productId: productExists._id, // Use MongoDB _id from Product
+                productId: productExists._id,
                 productName: product.name,
                 userShopName: user.shopName,
-                userId: user.userId,
+                userId: user._id,
                 orderId: order._id
             });
             await userHistory.save();
 
             // Create ProductHistory entry
             const productHistory = new ProductHistory({
+                productId: productExists._id,
                 productName: product.name,
-                productId: productExists._id, // Use MongoDB _id from Product
-                userId: user.userId,
+                userId: user._id,
                 userShopName: user.shopName,
                 orderId: order._id
             });
@@ -167,6 +171,12 @@ router.get('/:orderId', async (req, res) => {
 // UPDATE order
 router.put('/:orderId', async (req, res) => {
     try {
+        const { error } = orderSchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            const errors = error.details.map(err => err.message);
+            return res.status(400).json({ error: 'Validation failed', details: errors });
+        }
+
         const order = await Order.findOneAndUpdate(
             { orderId: req.params.orderId },
             req.body,
@@ -184,6 +194,9 @@ router.delete('/:orderId', async (req, res) => {
     try {
         const order = await Order.findOneAndDelete({ orderId: req.params.orderId });
         if (!order) return res.status(404).json({ error: 'Order not found' });
+        // Optionally delete related history entries
+        await UserHistory.deleteMany({ orderId: order._id });
+        await ProductHistory.deleteMany({ orderId: order._id });
         res.json({ success: 'Order deleted successfully' });
     } catch (error) {
         res.status(500).json({ error: error.message });
