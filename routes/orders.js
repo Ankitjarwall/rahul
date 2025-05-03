@@ -38,7 +38,7 @@ const billingSchema = Joi.object({
     paymentMethod: Joi.string().required(),
     moneyGiven: Joi.number().required(), // Enforce number
     pastOrderDue: Joi.number().min(0).required(),
-    finalAmount: Joi.number().positive().required()
+    finalAmount: Joi.number().required()
 }).unknown(true);
 
 // Validation schema for freeProducts
