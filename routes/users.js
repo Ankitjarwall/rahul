@@ -45,9 +45,8 @@ router.post('/', async (req, res) => {
 });
 
 // UPDATE user
-// UPDATE user
 router.put('/:userId', async (req, res) => {
-    console.log("Received user data:", req.body);
+    console.log("Received updated user data:", req.body);
     try {
         const { comments, ...otherUpdates } = req.body; // Separate comments from other fields
         // Prepare the update object
@@ -62,7 +61,7 @@ router.put('/:userId', async (req, res) => {
             { userId: req.params.userId },
             update,
             { new: true }
-        );
+        );  
 
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json({ success: 'User updated successfully', user });

@@ -1,7 +1,6 @@
 const express = require('express');
 const router = express.Router();
 
-
 // Single utility route
 router.post('/', (req, res) => {
     const { task, input_1, input_2, input } = req.body;
@@ -24,7 +23,7 @@ router.post('/', (req, res) => {
                     return res.status(400).json({ error: "Two inputs are required for multiplication" });
                 }
                 const product = convertToNumber(input_1) * convertToNumber(input_2);
-                return res.json({ result: product });
+                return res.json({ result: Number(product.toFixed(2)) });
 
             case 'convert':
                 if (input === undefined || input === null) {
@@ -48,7 +47,5 @@ function convertToNumber(value) {
     }
     return num;
 }
-
-
 
 module.exports = router;
