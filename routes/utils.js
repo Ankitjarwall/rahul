@@ -16,7 +16,7 @@ router.post('/', (req, res) => {
                     return res.status(400).json({ error: "Two inputs are required for addition" });
                 }
                 const sum = convertToNumber(input_1) + convertToNumber(input_2);
-                return res.json({ result: sum });
+                return res.json({ result: Number(sum.toFixed(2)) });
 
             case 'multiply':
                 if (input_1 === undefined || input_2 === undefined) {
