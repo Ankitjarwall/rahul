@@ -119,7 +119,6 @@ router.post('/', async (req, res) => {
     }
 });
 
-
 // SEARCH user history by userId and/or productId
 router.post('/search', async (req, res) => {
     try {
@@ -250,6 +249,10 @@ router.get('/user/:userId/history-pdf', async (req, res) => {
         doc.fontSize(12);
         doc.text(`User ID: ${userId}`, 300, doc.y + 5, { align: 'right' });
         doc.text(`Date: ${new Date().toLocaleDateString()}`, 300, doc.y + 5, { align: 'right' });
+        // Add Due Payment in red
+        doc.fillColor('red');
+        doc.text(`Due Payment: INR ${(user.dues || 0).toFixed(2)}`, 300, doc.y + 5, { align: 'right' });
+        doc.fillColor('black'); // Reset color to black for subsequent text
         doc.moveDown(2);
 
         // Adjust Y position to the bottom of the tallest column
