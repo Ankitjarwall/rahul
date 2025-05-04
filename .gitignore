@@ -34,3 +34,4 @@ coverage/
 *.swp
 format.json
 app.script
+package-lock.json
