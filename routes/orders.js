@@ -5,6 +5,8 @@ const Order = require('../models/Order');
 const Product = require('../models/Product');
 const User = require('../models/User');
 const PDFDocument = require('pdfkit');
+const fs = require('fs');
+const path = require('path');
 
 // Validation schema for productDetails
 const productSchema = Joi.object({
@@ -244,7 +246,9 @@ router.post('/search', async (req, res) => {
 router.get('/:orderId/invoice', async (req, res) => {
     try {
         const order = await Order.findOne({ orderId: req.params.orderId });
-        if (!order) return res.status(404).json({ error: 'Order not found' });
+        if (!order) {
+            return res.status(404).json({ error: 'Order not found' });
+        }
 
         // Create a new PDF document
         const doc = new PDFDocument({ margin: 50 });
@@ -258,27 +262,51 @@ router.get('/:orderId/invoice', async (req, res) => {
 
         // Helper function to add text with wrapping
         const addText = (text, x, y, options = {}) => {
-            doc.text(text, x, y, { width: 500, ...options });
+            if (isNaN(y)) {
+                console.error('Invalid y coordinate:', y);
+                y = doc.y || 50; // Fallback to a safe value
+            }
+            doc.text(text, x, y, { width: options.width || 500, ...options });
         };
 
-        // Header
-        doc.fontSize(20).text('Invoice', { align: 'center' });
-        doc.fontSize(12).text(`Order ID: ${order.orderId}`, { align: 'center' });
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
-        doc.moveDown(2);
-
-        // Customer Details
-        doc.fontSize(14).text('Customer Details', { underline: true });
+        // Company Details (centered)
+        doc.fontSize(14).font('Helvetica-Bold').text('Durga Sai Enterprises', { align: 'center' });
         doc.fontSize(10);
-        addText(`Name: ${order.user.name}`, 50, doc.y + 10);
-        addText(`Shop Name: ${order.user.shopName}`, 50, doc.y + 5);
-        addText(`Address: ${order.user.address}, ${order.user.town}, ${order.user.state}, ${order.user.pincode}`, 50, doc.y + 5);
-        addText(`Contact: ${order.user.contact?.[0]?.contact || 'N/A'}`, 50, doc.y + 5);
+        doc.text('Contact Us : (+91) 9876 54310', { align: 'center' });
+        doc.text('durgasaienterprises@email.com', { align: 'center' });
+        doc.text('Reg. No. RAN5207102024166530', { align: 'center' });
         doc.moveDown(2);
 
-        // Product Details Table
-        doc.fontSize(14).text('Product Details', { underline: true });
-        const tableTop = doc.y + 10;
+        // Two-column layout for Customer Details and Invoice Info
+        const columnWidth = 250; // Each column width (total page width ~550 - margins)
+        const startY = doc.y;
+
+        // Left Column: Customer Details
+        doc.fontSize(14).font('Helvetica-Bold').text('Customer Details', 50, doc.y, { underline: true });
+        doc.fontSize(10).font('Helvetica');;
+        addText(`${order.user.shopName}`, 50, doc.y + 5, { width: columnWidth });
+        addText(`Address: ${order.user.address}, ${order.user.town}, ${order.user.state}, ${order.user.pincode}`, 50, doc.y + 5, { width: columnWidth });
+        addText(`Contact: ${order.user.contact?.[0]?.contact || 'N/A'}`, 50, doc.y + 5, { width: columnWidth });
+
+        // Right Column: Invoice Info (aligned with Customer Details)
+        doc.fontSize(20).text('INVOICE', 300, startY, { align: 'right' });
+        doc.fontSize(12);
+        doc.text(`Order ID: ${order.orderId}`, 300, doc.y + 5, { align: 'right' });
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, 300, doc.y + 5, { align: 'right' });
+        doc.moveDown(2);
+
+        // Adjust Y position to the bottom of the tallest column
+        const customerDetailsHeight = doc.y - startY;
+        doc.y = startY + customerDetailsHeight + 20; // Move down after the tallest column
+
+        // Product Details Table (full width)
+        doc.fontSize(14).font('Helvetica-Bold').text('Product Details', 50, doc.y, { underline: true });
+        
+        let tableTop = doc.y + 10;
+        if (isNaN(tableTop)) {
+            console.error('Invalid tableTop:', tableTop);
+            tableTop = 200; // Fallback to a safe value
+        }
         const col1 = 50, col2 = 200, col3 = 250, col4 = 300, col5 = 350, col6 = 450;
 
         // Table Headers
@@ -286,7 +314,7 @@ router.get('/:orderId/invoice', async (req, res) => {
         doc.text('Product Name', col1, tableTop);
         doc.text('Weight', col2, tableTop);
         doc.text('Unit', col3, tableTop);
-        doc.text('Rate', col4, tableTop);
+        doc.text('Rate (INR)', col4, tableTop);
         doc.text('Quantity', col5, tableTop);
         doc.text('Total (INR)', col6, tableTop);
 
@@ -313,8 +341,12 @@ router.get('/:orderId/invoice', async (req, res) => {
 
         // Free Products (if any)
         if (order.isfreeProducts && order.freeProducts?.length > 0) {
-            doc.fontSize(14).text('Free Products', { underline: true });
-            const freeTableTop = doc.y + 10;
+            doc.fontSize(14).text('Free Products', 50, doc.y, { underline: true });
+            let freeTableTop = doc.y + 10;
+            if (isNaN(freeTableTop)) {
+                console.error('Invalid freeTableTop:', freeTableTop);
+                freeTableTop = 200;
+            }
             doc.fontSize(10).font('Helvetica-Bold');
             doc.text('Product Name', col1, freeTableTop);
             doc.text('Weight', col2, freeTableTop);
@@ -340,30 +372,52 @@ router.get('/:orderId/invoice', async (req, res) => {
             });
             doc.moveDown(2);
         }
-
-        // Billing Summary
-        doc.fontSize(14).text('Billing Summary', { underline: true });
-        doc.fontSize(10);
+        // Billing Summary (three columns: left, center, right)
+        doc.fontSize(14).font('Helvetica-Bold').text('Billing Summary', 50, doc.y, { underline: true });
+        doc.fontSize(10).font('Helvetica');
         y = doc.y + 10;
-        addText(`Order Weight: ${order.billing.orderWeight} kg`, 50, y);
-        addText(`Order Amount: INR ${order.billing.orderAmount}`, 50, y + 15);
-        addText(`Delivery Charges: INR ${order.billing.deliveryCharges}`, 50, y + 30);
-        addText(`Past Order Due: INR ${order.billing.pastOrderDue}`, 50, y + 45);
-        addText(`Total Amount: INR ${order.billing.totalAmount}`, 50, y + 60);
-        addText(`Payment Method: ${order.billing.paymentMethod}`, 50, y + 75);
-        addText(`Money Given: INR ${order.billing.moneyGiven}`, 50, y + 90);
-        addText(`Final Amount: INR ${order.billing.finalAmount}`, 50, y + 105);
-        doc.moveDown(2);
 
+        const columnLeft = 50;
+        const columnCenter = 200;
+        const columnRight = 400;
+
+        // Set a consistent starting Y position for all columns
+        const billingStartY = y;
+
+        // Left Column: Dues
+        doc.font('Helvetica-Bold').text('Dues', columnLeft, billingStartY);
+        doc.font('Helvetica').text(`Past Order Due: INR ${order.billing.pastOrderDue}`, columnLeft, billingStartY + 15);
+
+        // Center Column: Current Order Billing
+        doc.font('Helvetica-Bold').text('Current Order Billing', columnCenter, billingStartY);
+        doc.font('Helvetica');
+        addText(`Order Weight: ${order.billing.orderWeight} kg`, columnCenter, billingStartY + 15);
+        addText(`Payment Method: ${order.billing.paymentMethod}`, columnCenter, billingStartY + 30);
+        addText(`Money Given: INR ${order.billing.moneyGiven}`, columnCenter, billingStartY + 45);
+        addText(`Order Amount: INR ${order.billing.orderAmount}`, columnCenter, billingStartY + 60);
+        addText(`Delivery Charges: INR ${order.billing.deliveryCharges}`, columnCenter, billingStartY + 75);
+        addText(`Total Amount: INR ${order.billing.totalAmount}`, columnCenter, billingStartY + 90);
+
+        // Right Column: Final Billing
+        doc.font('Helvetica-Bold').text('Final Billing', columnRight, billingStartY);
+        doc.font('Helvetica');
+        addText(`Total Amount: INR ${order.billing.totalAmount}`, columnRight, billingStartY + 15);
+        addText(`Past Order Due: INR ${order.billing.pastOrderDue}`, columnRight, billingStartY + 30);
+        addText(`Final Amount: INR ${order.billing.finalAmount}`, columnRight, billingStartY + 45);
 
         // Footer
-        doc.fontSize(10).text('Thank you for your business!', { align: 'center' });
+        doc.moveDown(2);
+        // Move to the bottom of the page
+        // doc.moveDown(10);
+        doc.text('Thank you for your business! Please pay within 15 days of receiving this invoice.', 0, 730, { align: 'center' });
 
         // Finalize the PDF
         doc.end();
     } catch (error) {
         console.error('Error generating invoice:', error);
-        res.status(500).json({ error: error.message });
+        if (!res.headersSent) {
+            res.status(500).json({ error: error.message });
+        }
     }
 });
 
