@@ -406,10 +406,10 @@ router.get('/:orderId/invoice', async (req, res) => {
         doc.font('Helvetica');
         addText(`Order Weight: ${order.billing.orderWeight} kg`, columnCenter, billingStartY + 15);
         addText(`Payment Method: ${order.billing.paymentMethod}`, columnCenter, billingStartY + 30);
-        addText(`Money Given: INR ${order.billing.moneyGiven}`, columnCenter, billingStartY + 65);
-        addText(`Order Amount: INR ${order.billing.orderAmount}`, columnCenter, billingStartY + 60);
-        addText(`Delivery Charges: INR ${order.billing.deliveryCharges}`, columnCenter, billingStartY + 75);
-        addText(`Total Amount: INR ${order.billing.totalAmount}`, columnCenter, billingStartY + 90);
+        addText(`Money Given: INR ${order.billing.moneyGiven}`, columnCenter, billingStartY + 45);
+        addText(`Order Amount: INR ${order.billing.orderAmount}`, columnCenter, billingStartY + 70);
+        addText(`Delivery Charges: INR ${order.billing.deliveryCharges}`, columnCenter, billingStartY + 85);
+        addText(`Total Amount: INR ${order.billing.totalAmount}`, columnCenter, billingStartY + 100);
 
         // Right Column: Final Billing
         doc.font('Helvetica-Bold').text('Final Billing', columnRight, billingStartY);
