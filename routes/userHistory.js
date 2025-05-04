@@ -264,14 +264,14 @@ router.get('/user/:userId/history-pdf', async (req, res) => {
             console.error('Invalid tableTop:', tableTop);
             tableTop = 200; // Fallback to a safe value
         }
-        const col1 = 50, col2 = 120, col3 = 190, col4 = 290, col5 = 390, col6 = 440, col7 = 490;
+        const col1 = 50, col2 = 120, col3 = 208, col4 = 383, col5 = 433, col6 = 493;
 
         // Table Headers
         doc.fontSize(10).font('Helvetica-Bold');
         doc.text('Order Date', col1, tableTop);
         doc.text('Order ID', col2, tableTop);
         doc.text('Product Name', col3, tableTop);
-        doc.text('Rate (INR)', col4, tableTop);
+        doc.text('Rate', col4, tableTop);
         doc.text('Quantity', col5, tableTop);
         doc.text('Total (INR)', col6, tableTop);
 
@@ -296,7 +296,7 @@ router.get('/user/:userId/history-pdf', async (req, res) => {
 
             doc.text(new Date(entry.orderDate).toLocaleDateString(), col1, y);
             doc.text(`${entry.orderId} ${sign}`, col2, y);
-            addText(entry.productName, col3, y, { width: 90 });
+            addText(entry.productName, col3, y, { width: 175 }); // Adjusted to 175 to fit page
             doc.text(`${entry.rate}`, col4, y);
             doc.text(`${entry.quantity}`, col5, y);
             doc.text(`${entry.totalAmount}`, col6, y);
