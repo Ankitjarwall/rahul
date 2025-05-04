@@ -7,6 +7,8 @@ const User = require('../models/User');
 const PDFDocument = require('pdfkit');
 const fs = require('fs');
 const path = require('path');
+const UserHistory = require('../models/userHistory');
+const ProductHistory = require('../models/productHistory');
 
 // Validation schema for productDetails
 const productSchema = Joi.object({
@@ -295,7 +297,7 @@ router.get('/:orderId/invoice', async (req, res) => {
             month: 'long',
             year: 'numeric'
         });
-        
+
         // Right Column: Invoice Info (aligned with Customer Details)
         doc.fontSize(20).text('INVOICE', 300, startY, { align: 'right' });
         doc.fontSize(12);
