@@ -242,6 +242,8 @@ router.post('/search', async (req, res) => {
     }
 });
 
+
+
 // GENERATE PDF INVOICE
 router.get('/:orderId/invoice', async (req, res) => {
     try {
@@ -288,11 +290,20 @@ router.get('/:orderId/invoice', async (req, res) => {
         addText(`Address: ${order.user.address}, ${order.user.town}, ${order.user.state}, ${order.user.pincode}`, 50, doc.y + 5, { width: columnWidth });
         addText(`Contact: ${order.user.contact?.[0]?.contact || 'N/A'}`, 50, doc.y + 5, { width: columnWidth });
 
+        const formattedDate = new Date(order.createdAt).toLocaleDateString('en-GB', {
+            day: 'numeric',
+            month: 'long',
+            year: 'numeric'
+        });
+        
         // Right Column: Invoice Info (aligned with Customer Details)
         doc.fontSize(20).text('INVOICE', 300, startY, { align: 'right' });
         doc.fontSize(12);
         doc.text(`Order ID: ${order.orderId}`, 300, doc.y + 5, { align: 'right' });
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, 300, doc.y + 5, { align: 'right' });
+        doc.text(`Date: ${formattedDate}`, 300, doc.y + 5, {
+            width: 250,
+            align: 'right'
+        });
         doc.moveDown(2);
 
         // Adjust Y position to the bottom of the tallest column
