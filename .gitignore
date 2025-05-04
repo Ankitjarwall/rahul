@@ -33,3 +33,4 @@ coverage/
 *.bak
 *.swp
 format.json
+app.script

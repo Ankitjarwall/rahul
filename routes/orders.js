@@ -2,17 +2,15 @@ const express = require('express');
 const router = express.Router();
 const Joi = require('joi');
 const Order = require('../models/Order');
-const UserHistory = require('../models/userHistory');
-const ProductHistory = require('../models/productHistory');
 const Product = require('../models/Product');
-const User = require('../models/User'); // Added User import
-const axios = require('axios');
+const User = require('../models/User');
+const PDFDocument = require('pdfkit');
 
 // Validation schema for productDetails
 const productSchema = Joi.object({
     productId: Joi.string().required(),
     name: Joi.string().required(),
-    weight: Joi.number().positive().required(), // Enforce number
+    weight: Joi.number().positive().required(),
     unit: Joi.string().required(),
     mrp: Joi.number().positive().required(),
     rate: Joi.number().positive().required(),
@@ -36,7 +34,7 @@ const billingSchema = Joi.object({
     deliveryCharges: Joi.number().min(0).required(),
     totalAmount: Joi.number().positive().required(),
     paymentMethod: Joi.string().required(),
-    moneyGiven: Joi.number().required(), // Enforce number
+    moneyGiven: Joi.number().required(),
     pastOrderDue: Joi.number().min(0).required(),
     finalAmount: Joi.number().required()
 }).unknown(true);
@@ -68,7 +66,7 @@ const orderSchema = Joi.object({
         address: Joi.string().required(),
         town: Joi.string().required(),
         state: Joi.string().required(),
-        pincode: Joi.number().required(), // Enforce number
+        pincode: Joi.number().required(),
         contact: Joi.array().items(contactSchema).optional()
     }).unknown(true),
     productDetails: Joi.array().items(productSchema).required().min(1),
@@ -82,7 +80,6 @@ const orderSchema = Joi.object({
 router.post('/', async (req, res) => {
     console.log("Received order data:", JSON.stringify(req.body, null, 2));
     try {
-        // Coerce string inputs to numbers
         const data = { ...req.body };
         if (data.user && typeof data.user.pincode === 'string') {
             data.user.pincode = parseInt(data.user.pincode, 10);
@@ -97,7 +94,6 @@ router.post('/', async (req, res) => {
             }));
         }
 
-        // Validate request body
         const { error } = orderSchema.validate(data, { abortEarly: false });
         if (error) {
             const errors = error.details.map(err => err.message);
@@ -105,13 +101,11 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: 'Validation failed', details: errors });
         }
 
-        // Verify user exists
         const user = await User.findOne({ userId: data.user.userId });
         if (!user) {
             return res.status(400).json({ error: `Invalid userId: ${data.user.userId}` });
         }
 
-        // Generate unique orderId
         const generateOrderId = async () => {
             const now = new Date();
             const day = String(now.getDate()).padStart(2, '0');
@@ -126,16 +120,13 @@ router.post('/', async (req, res) => {
         const order = new Order({ ...data, orderId });
         await order.save();
 
-        // Add UserHistory and ProductHistory entries for each product
         const { productDetails } = data;
         for (const product of productDetails) {
-            // Verify productId exists in Product collection
             const productExists = await Product.findOne({ productId: product.productId });
             if (!productExists) {
                 return res.status(400).json({ error: `Invalid productId: ${product.productId}` });
             }
 
-            // Create UserHistory entry
             const userHistory = new UserHistory({
                 productId: productExists._id,
                 productName: product.name,
@@ -145,7 +136,6 @@ router.post('/', async (req, res) => {
             });
             await userHistory.save();
 
-            // Create ProductHistory entry
             const productHistory = new ProductHistory({
                 productId: productExists._id,
                 productName: product.name,
@@ -163,7 +153,7 @@ router.post('/', async (req, res) => {
     }
 });
 
-// GET all orders (limited fields for main page)
+// GET all orders
 router.get('/', async (req, res) => {
     try {
         const orders = await Order.find()
@@ -174,7 +164,7 @@ router.get('/', async (req, res) => {
     }
 });
 
-// GET specific order (full details)
+// GET specific order
 router.get('/:orderId', async (req, res) => {
     try {
         const order = await Order.findOne({ orderId: req.params.orderId });
@@ -188,7 +178,6 @@ router.get('/:orderId', async (req, res) => {
 // UPDATE order
 router.put('/:orderId', async (req, res) => {
     try {
-        // Coerce string inputs to numbers
         const data = { ...req.body };
         if (data.user && typeof data.user.pincode === 'string') {
             data.user.pincode = parseInt(data.user.pincode, 10);
@@ -228,7 +217,6 @@ router.delete('/:orderId', async (req, res) => {
     try {
         const order = await Order.findOneAndDelete({ orderId: req.params.orderId });
         if (!order) return res.status(404).json({ error: 'Order not found' });
-        // Delete related history entries
         await UserHistory.deleteMany({ orderId: order._id });
         await ProductHistory.deleteMany({ orderId: order._id });
         res.json({ success: 'Order deleted successfully' });
@@ -253,45 +241,129 @@ router.post('/search', async (req, res) => {
 });
 
 // GENERATE PDF INVOICE
-function convertToDownloadUrl(driveLink) {
-    const fileIdMatch = driveLink.match(/\/d\/(.+?)\//);
-    if (!fileIdMatch) throw new Error("Invalid Google Drive link");
-    const fileId = fileIdMatch[1];
-    return `https://drive.google.com/uc?export=download&id=${fileId}`;
-}
-
-router.get('/invoice/:orderId', async (req, res) => {
+router.get('/:orderId/invoice', async (req, res) => {
     try {
         const order = await Order.findOne({ orderId: req.params.orderId });
         if (!order) return res.status(404).json({ error: 'Order not found' });
 
-        const isPreview = req.query.preview === 'true';
-        const appsScriptUrl = 'https://script.google.com/macros/s/AKfycbx_iJ6Xxd5AQ413NcKvDZ7t1A0SsUvyOt8CeXBQ06-8tjo65cR_voTWAWHt4o9T_ETHqQ/exec';
+        // Create a new PDF document
+        const doc = new PDFDocument({ margin: 50 });
 
-        const response = await axios.post(appsScriptUrl, order, {
-            headers: { 'Content-Type': 'application/json' }
+        // Set response headers for PDF
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
+
+        // Pipe the PDF to the response
+        doc.pipe(res);
+
+        // Helper function to add text with wrapping
+        const addText = (text, x, y, options = {}) => {
+            doc.text(text, x, y, { width: 500, ...options });
+        };
+
+        // Header
+        doc.fontSize(20).text('Invoice', { align: 'center' });
+        doc.fontSize(12).text(`Order ID: ${order.orderId}`, { align: 'center' });
+        doc.text(`Date: ${new Date().toLocaleDateString()}`, { align: 'center' });
+        doc.moveDown(2);
+
+        // Customer Details
+        doc.fontSize(14).text('Customer Details', { underline: true });
+        doc.fontSize(10);
+        addText(`Name: ${order.user.name}`, 50, doc.y + 10);
+        addText(`Shop Name: ${order.user.shopName}`, 50, doc.y + 5);
+        addText(`Address: ${order.user.address}, ${order.user.town}, ${order.user.state}, ${order.user.pincode}`, 50, doc.y + 5);
+        addText(`Contact: ${order.user.contact?.[0]?.contact || 'N/A'}`, 50, doc.y + 5);
+        doc.moveDown(2);
+
+        // Product Details Table
+        doc.fontSize(14).text('Product Details', { underline: true });
+        const tableTop = doc.y + 10;
+        const col1 = 50, col2 = 200, col3 = 250, col4 = 300, col5 = 350, col6 = 450;
+
+        // Table Headers
+        doc.fontSize(10).font('Helvetica-Bold');
+        doc.text('Product Name', col1, tableTop);
+        doc.text('Weight', col2, tableTop);
+        doc.text('Unit', col3, tableTop);
+        doc.text('Rate', col4, tableTop);
+        doc.text('Quantity', col5, tableTop);
+        doc.text('Total (INR)', col6, tableTop);
+
+        // Table Divider
+        doc.moveTo(50, tableTop + 15).lineTo(550, tableTop + 15).stroke();
+
+        // Table Rows
+        doc.font('Helvetica');
+        let y = tableTop + 20;
+        order.productDetails.forEach(product => {
+            addText(product.name, col1, y, { width: 140 });
+            doc.text(`${product.weight}`, col2, y);
+            doc.text(product.unit, col3, y);
+            doc.text(`${product.rate}`, col4, y);
+            doc.text(`${product.quantity}`, col5, y);
+            doc.text(`${product.totalAmount}`, col6, y);
+            y += 20;
+            if (y > 700) {
+                doc.addPage();
+                y = 50;
+            }
         });
+        doc.moveDown(2);
 
-        const { status, pdfLink, message } = response.data;
-        if (!pdfLink) {
-            return res.status(500).json({ error: message || 'PDF link missing' });
+        // Free Products (if any)
+        if (order.isfreeProducts && order.freeProducts?.length > 0) {
+            doc.fontSize(14).text('Free Products', { underline: true });
+            const freeTableTop = doc.y + 10;
+            doc.fontSize(10).font('Helvetica-Bold');
+            doc.text('Product Name', col1, freeTableTop);
+            doc.text('Weight', col2, freeTableTop);
+            doc.text('Unit', col3, freeTableTop);
+            doc.text('Rate (INR)', col4, freeTableTop);
+            doc.text('Quantity', col5, freeTableTop);
+            doc.text('Total (INR)', col6, freeTableTop);
+            doc.moveTo(50, freeTableTop + 15).lineTo(550, freeTableTop + 15).stroke();
+            doc.font('Helvetica');
+            y = freeTableTop + 20;
+            order.freeProducts.forEach(product => {
+                addText(product.name, col1, y, { width: 140 });
+                doc.text(`${product.weight}`, col2, y);
+                doc.text(product.unit, col3, y);
+                doc.text(`${product.rate}`, col4, y);
+                doc.text(`${product.quantity}`, col5, y);
+                doc.text(`${product.totalAmount}`, col6, y);
+                y += 20;
+                if (y > 700) {
+                    doc.addPage();
+                    y = 50;
+                }
+            });
+            doc.moveDown(2);
         }
 
-        if (isPreview) {
-            return res.redirect(pdfLink);
-        } else {
-            const downloadUrl = convertToDownloadUrl(pdfLink);
-            const pdfResponse = await axios.get(downloadUrl, { responseType: 'arraybuffer' });
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename=invoice-${order.orderId}.pdf`);
-            return res.send(pdfResponse.data);
-        }
+        // Billing Summary
+        doc.fontSize(14).text('Billing Summary', { underline: true });
+        doc.fontSize(10);
+        y = doc.y + 10;
+        addText(`Order Weight: ${order.billing.orderWeight} kg`, 50, y);
+        addText(`Order Amount: INR ${order.billing.orderAmount}`, 50, y + 15);
+        addText(`Delivery Charges: INR ${order.billing.deliveryCharges}`, 50, y + 30);
+        addText(`Past Order Due: INR ${order.billing.pastOrderDue}`, 50, y + 45);
+        addText(`Total Amount: INR ${order.billing.totalAmount}`, 50, y + 60);
+        addText(`Payment Method: ${order.billing.paymentMethod}`, 50, y + 75);
+        addText(`Money Given: INR ${order.billing.moneyGiven}`, 50, y + 90);
+        addText(`Final Amount: INR ${order.billing.finalAmount}`, 50, y + 105);
+        doc.moveDown(2);
+
+
+        // Footer
+        doc.fontSize(10).text('Thank you for your business!', { align: 'center' });
+
+        // Finalize the PDF
+        doc.end();
     } catch (error) {
-        console.error('PDF Generation Error:', error.message);
-        if (error.response?.data) {
-            console.error('Apps Script Response:', error.response.data);
-        }
-        res.status(500).json({ error: `Failed to generate PDF: ${error.message}` });
+        console.error('Error generating invoice:', error);
+        res.status(500).json({ error: error.message });
     }
 });
 

@@ -18,13 +18,15 @@
   "homepage": "https://github.com/Ankitjarwall/rahul#readme",
   "description": "",
   "dependencies": {
-    "axios": "^1.8.4",
+    "axios": "^1.9.0",
+    "body-parser": "^2.2.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "joi": "^17.13.3",
     "mongoose": "^8.13.1",
     "nodemon": "^3.1.9",
+    "pdfkit": "^0.17.1",
     "uuid": "^11.1.0"
   }
 }
