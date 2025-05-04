@@ -313,7 +313,7 @@ router.get('/:orderId/invoice', async (req, res) => {
         doc.y = startY + customerDetailsHeight + 20; // Move down after the tallest column
 
         // Product Details Table (full width)
-        doc.fontSize(14).font('Helvetica-Bold').text('Product Details', 50, doc.y, { underline: true });
+        doc.fontSize(14).font('Helvetica-Bold').text('Order Details', 50, doc.y, { underline: true });
         
         let tableTop = doc.y + 10;
         if (isNaN(tableTop)) {
