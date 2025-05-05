@@ -136,7 +136,8 @@ router.post('/', async (req, res) => {
                 productName: product.name,
                 userShopName: user.shopName,
                 userId: user._id,
-                orderId: order._id
+                orderId: order._id,
+                orderIdString: order.orderId
             });
             await userHistory.save();
 
@@ -145,7 +146,8 @@ router.post('/', async (req, res) => {
                 productName: product.name,
                 userId: user._id,
                 userShopName: user.shopName,
-                orderId: order._id
+                orderId: order._id,
+                orderIdString: order.orderId
             });
             await productHistory.save();
         }

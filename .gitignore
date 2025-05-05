@@ -35,3 +35,4 @@ coverage/
 format.json
 app.script
 package-lock.json
+migrate.js

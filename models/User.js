@@ -23,6 +23,15 @@ const userSchema = new mongoose.Schema({
     }],
 }, { timestamps: true });
 
-userSchema.index({ name: "text", shopName: "text", state: "text", town: "text", dues: "text", contact: "text", });
+userSchema.index({
+    "name": "text",
+    "shopName": "text",
+    "state": "text",
+    "town": "text",
+    "contact.contact": "text" // Fix to index the subfield
+});
+
+userSchema.index({ "name": 1, "shopName": 1 });
+
 
 module.exports = mongoose.model('User', userSchema);

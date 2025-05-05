@@ -17,6 +17,13 @@ const productSchema = new mongoose.Schema({
     rate: Number,
 }, { timestamps: true });
 
-productSchema.index({ productName: "text" });
+productSchema.index({
+    "productName": "text",
+    "weight": "text",
+    "productId": "text"
+});
+
+// Fix typo in the regular index
+productSchema.index({ "productName": 1 });
 
 module.exports = mongoose.model('Product', productSchema);

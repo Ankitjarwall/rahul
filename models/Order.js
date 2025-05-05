@@ -72,4 +72,7 @@ orderSchema.index({
     "billing.paymentMethod": "text"
 });
 
+// Add index on productDetails.name to support $regex queries
+orderSchema.index({ "productDetails.name": 1 });
+
 module.exports = mongoose.model('Order', orderSchema);
