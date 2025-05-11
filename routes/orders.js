@@ -34,9 +34,9 @@ const contactSchema = Joi.object({
 // Validation schema for billing
 const billingSchema = Joi.object({
     orderWeight: Joi.number().positive().required(),
-    orderAmount: Joi.number().positive().required(),
+    orderAmount: Joi.number().required(),
     deliveryCharges: Joi.number().min(0).required(),
-    totalAmount: Joi.number().positive().required(),
+    totalAmount: Joi.number().required(),
     paymentMethod: Joi.string().required(),
     moneyGiven: Joi.number().required(),
     pastOrderDue: Joi.number().min(0).required(),
