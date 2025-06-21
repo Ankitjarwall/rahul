@@ -31,6 +31,7 @@ app.use('/api/utils', utilsRoutes);
 app.use('/api/user-history', userHistoryRoutes);
 app.use('/api/product-history', productHistoryRoutes); // Added product history routes
 app.use('/api/search', globalSearchRouter);
+
 // Root Route
 app.get('/', (req, res) => {
     res.send("Welcome to the API");
