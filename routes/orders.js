@@ -39,7 +39,7 @@ const billingSchema = Joi.object({
     totalAmount: Joi.number().required(),
     paymentMethod: Joi.string().required(),
     moneyGiven: Joi.number().required(),
-    pastOrderDue: Joi.number().min(0).required(),
+    pastOrderDue: Joi.number().required(),
     finalAmount: Joi.number().required()
 }).unknown(true);
 
