@@ -170,6 +170,20 @@ router.get('/', async (req, res) => {
     }
 });
 
+// SEARCH orders (must be before /:orderId route)
+router.post('/search', async (req, res) => {
+    try {
+        const { query } = req.body;
+        if (!query) return res.status(400).json({ error: 'No search query provided' });
+        const orders = await Order.find({ $text: { $search: query } })
+            .select('orderId user.name user.shopName user.town user.state productDetails.name billing.totalAmount createdAt');
+        res.json(orders);
+    } catch (error) {
+        console.error('Error searching orders:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // GET specific order
 router.get('/:orderId', async (req, res) => {
     try {
@@ -231,22 +245,6 @@ router.delete('/:orderId', async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 });
-
-// SEARCH orders
-router.post('/search', async (req, res) => {
-    try {
-        const { query } = req.body;
-        if (!query) return res.status(400).json({ error: 'No search query provided' });
-        const orders = await Order.find({ $text: { $search: query } })
-            .select('user.name user.shopName user.town user.state productDetails.name billing.totalAmount createdAt');
-        res.json(orders);
-    } catch (error) {
-        console.error('Error searching orders:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-
 
 // GENERATE PDF INVOICE
 router.get('/:orderId/invoice', async (req, res) => {

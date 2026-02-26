@@ -13,6 +13,19 @@ router.get('/', async (req, res) => {
     }
 });
 
+// SEARCH users (must be before /:userId route)
+router.post('/search', async (req, res) => {
+    try {
+        const { query } = req.body;
+        if (!query) return res.status(400).json({ error: 'No search query provided' });
+        const users = await User.find({ $text: { $search: query } })
+            .select('userId name shopName town state contact');
+        res.json(users);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // GET specific user (full details)
 router.get('/:userId', async (req, res) => {
     try {
@@ -49,19 +62,25 @@ router.put('/:userId', async (req, res) => {
     console.log("Received updated user data:", req.body);
     try {
         const { comments, ...otherUpdates } = req.body; // Separate comments from other fields
-        // Prepare the update object
-        const update = { ...otherUpdates };
+
+        // Prepare the update object with $set for regular fields
+        const update = {};
+
+        // Use $set for regular field updates if there are any
+        if (Object.keys(otherUpdates).length > 0) {
+            update.$set = otherUpdates;
+        }
 
         // If comments are provided, append them to the existing comments array
-        if (comments && Array.isArray(comments)) {
-            update.$push = { comments: { $each: comments } }; // Use $push to append new comments
+        if (comments && Array.isArray(comments) && comments.length > 0) {
+            update.$push = { comments: { $each: comments } };
         }
 
         const user = await User.findOneAndUpdate(
             { userId: req.params.userId },
             update,
             { new: true }
-        );  
+        );
 
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json({ success: 'User updated successfully', user });
@@ -76,19 +95,6 @@ router.delete('/:userId', async (req, res) => {
         const user = await User.findOneAndDelete({ userId: req.params.userId });
         if (!user) return res.status(404).json({ error: 'User not found' });
         res.json({ success: 'User deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// SEARCH users
-router.post('/search', async (req, res) => {
-    try {
-        const { query } = req.body;
-        if (!query) return res.status(400).json({ error: 'No search query provided' });
-        const users = await User.find({ $text: { $search: query } })
-            .select('name shopName town state contact');
-        res.json(users);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

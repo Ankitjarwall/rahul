@@ -13,6 +13,19 @@ router.get('/', async (req, res) => {
     }
 });
 
+// SEARCH products (must be before /:productId route)
+router.post('/search', async (req, res) => {
+    try {
+        const { query } = req.body;
+        if (!query) return res.status(400).json({ error: 'No search query provided' });
+        const products = await Product.find({ $text: { $search: query } })
+            .select('productId productImage productName mrp rate');
+        res.json(products);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 // GET specific product (full details)
 router.get('/:productId', async (req, res) => {
     try {
@@ -62,19 +75,6 @@ router.delete('/:productId', async (req, res) => {
         const product = await Product.findOneAndDelete({ productId: req.params.productId });
         if (!product) return res.status(404).json({ error: 'Product not found' });
         res.json({ success: 'Product deleted successfully' });
-    } catch (error) {
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// SEARCH products
-router.post('/search', async (req, res) => {
-    try {
-        const { query } = req.body;
-        if (!query) return res.status(400).json({ error: 'No search query provided' });
-        const products = await Product.find({ $text: { $search: query } })
-            .select('productImage productName mrp rate');
-        res.json(products);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

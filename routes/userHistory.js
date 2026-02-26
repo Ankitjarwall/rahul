@@ -105,12 +105,19 @@ router.post('/', async (req, res) => {
             return res.status(400).json({ error: `Invalid userId: ${req.body.userId}` });
         }
 
+        // Verify orderId exists and get the order
+        const order = await Order.findById(req.body.orderId);
+        if (!order) {
+            return res.status(400).json({ error: `Invalid orderId: ${req.body.orderId}` });
+        }
+
         const history = new UserHistory({
             productId: product._id,
             productName: req.body.productName || product.productName,
             userShopName: req.body.userShopName,
             userId: user._id,
-            orderId: req.body.orderId
+            orderId: order._id,
+            orderIdString: order.orderId
         });
         await history.save();
         res.status(201).json({ success: 'User history entry added successfully', history });
