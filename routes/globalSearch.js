@@ -34,28 +34,27 @@ const findMatchedField = (doc, query, fieldsToCheck) => {
         if (Array.isArray(value)) {
             for (const item of value) {
                 if (typeof item === 'object') {
-                    // Check nested field in array (e.g., contact.contact, comments.message)
                     const lastKey = keys[keys.length - 1];
                     const nestedValue = item[lastKey] || item;
                     if (typeof nestedValue === 'string' && regex.test(nestedValue)) {
-                        return [{ [field]: nestedValue }];
+                        return `${field} : ${nestedValue}`;
                     }
                 } else if (typeof item === 'string' && regex.test(item)) {
-                    return [{ [field]: item }];
+                    return `${field} : ${item}`;
                 }
             }
         }
         // Check string values
         else if (typeof value === 'string' && regex.test(value)) {
-            return [{ [field]: value }];
+            return `${field} : ${value}`;
         }
         // Check numeric values
         else if (typeof value === 'number' && isNumeric && value === numericQuery) {
-            return [{ [field]: value }];
+            return `${field} : ${value}`;
         }
     }
 
-    return [];
+    return "";
 };
 
 // SEARCH PRODUCTS
@@ -152,21 +151,21 @@ const findOrderMatchedField = (order, query) => {
 
     // Check orderId
     if (order.orderId && regex.test(order.orderId)) {
-        return [{ orderId: order.orderId }];
+        return `orderId : ${order.orderId}`;
     }
     // Check user.name
     if (order.user?.name && regex.test(order.user.name)) {
-        return [{ name: order.user.name }];
+        return `name : ${order.user.name}`;
     }
     // Check user.shopName
     if (order.user?.shopName && regex.test(order.user.shopName)) {
-        return [{ shopName: order.user.shopName }];
+        return `shopName : ${order.user.shopName}`;
     }
     // Check user.contact
     if (order.user?.contact && Array.isArray(order.user.contact)) {
         for (const c of order.user.contact) {
             if (c.contact && regex.test(c.contact)) {
-                return [{ contact: c.contact }];
+                return `contact : ${c.contact}`;
             }
         }
     }
@@ -174,7 +173,7 @@ const findOrderMatchedField = (order, query) => {
     if (order.productDetails && Array.isArray(order.productDetails)) {
         for (const p of order.productDetails) {
             if (p.name && regex.test(p.name)) {
-                return [{ productName: p.name }];
+                return `productName : ${p.name}`;
             }
         }
     }
@@ -182,12 +181,12 @@ const findOrderMatchedField = (order, query) => {
     if (order.comments && Array.isArray(order.comments)) {
         for (const c of order.comments) {
             if (c.message && regex.test(c.message)) {
-                return [{ comment: c.message }];
+                return `comment : ${c.message}`;
             }
         }
     }
 
-    return [];
+    return "";
 };
 
 // SEARCH USERS
@@ -245,31 +244,31 @@ const findUserMatchedField = (user, query) => {
 
     // Check fields in order of priority
     if (user.name && regex.test(user.name)) {
-        return [{ name: user.name }];
+        return `name : ${user.name}`;
     }
     if (user.shopName && regex.test(user.shopName)) {
-        return [{ shopName: user.shopName }];
+        return `shopName : ${user.shopName}`;
     }
     if (user.userId && regex.test(user.userId)) {
-        return [{ userId: user.userId }];
+        return `userId : ${user.userId}`;
     }
     if (user.address && regex.test(user.address)) {
-        return [{ address: user.address }];
+        return `address : ${user.address}`;
     }
     if (user.town && regex.test(user.town)) {
-        return [{ town: user.town }];
+        return `town : ${user.town}`;
     }
     if (user.state && regex.test(user.state)) {
-        return [{ state: user.state }];
+        return `state : ${user.state}`;
     }
     if (isNumeric && user.pincode === numericQuery) {
-        return [{ pincode: user.pincode }];
+        return `pincode : ${user.pincode}`;
     }
     // Check contact array
     if (user.contact && Array.isArray(user.contact)) {
         for (const c of user.contact) {
             if (c.contact && regex.test(c.contact)) {
-                return [{ contact: c.contact }];
+                return `contact : ${c.contact}`;
             }
         }
     }
@@ -277,12 +276,12 @@ const findUserMatchedField = (user, query) => {
     if (user.comments && Array.isArray(user.comments)) {
         for (const c of user.comments) {
             if (c.message && regex.test(c.message)) {
-                return [{ comment: c.message }];
+                return `comment : ${c.message}`;
             }
         }
     }
 
-    return [];
+    return "";
 };
 
 module.exports = router;
