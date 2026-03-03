@@ -1,38 +1,38 @@
-# Node.js dependencies
+# Dependencies
 node_modules/
-npm-debug.log
-yarn-error.log
 
 # Environment variables
 .env
+.env.local
+.env.production
 
 # Logs
 logs/
 *.log
+npm-debug.log*
 
-# Build output (if applicable)
-dist/
-build/
-
-# Editor/IDE files
-.vscode/
-.idea/
-*.sublime-project
-*.sublime-workspace
-
-# OS-specific files
+# OS files
 .DS_Store
 Thumbs.db
 
-# Testing artifacts
-coverage/
-*.test.js
+# IDE
+.vscode/
+.idea/
+
+# Build output
+dist/
+build/
+
+# Python (seed script)
+__pycache__/
+*.pyc
+.venv/
+venv/
 
 # Temporary files
 *.tmp
-*.bak
-*.swp
-format.json
-app.script
+*.temp
+
+seed_data.py
+seed_requirements.txt
 package-lock.json
-migrate.js
