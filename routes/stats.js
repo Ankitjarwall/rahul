@@ -118,7 +118,7 @@ const formatTrend = (current, previous) => {
         value: current,
         previousValue: previous,
         percentage: percentage,
-        trend: isUp ? 'up' : 'down',
+        trend: isUp ? 'True' : 'False',
         trendLabel: isUp ? `+${percentage}%` : `${percentage}%`,
         trendColor: isUp ? TREND_COLORS.up : TREND_COLORS.down
     };
