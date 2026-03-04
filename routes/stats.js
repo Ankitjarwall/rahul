@@ -128,8 +128,8 @@ const formatTrend = (current, previous) => {
 const formatNoTrend = (value) => {
     return {
         value: value,
-        previousValue: null,
-        percentage: null,
+        previousValue: '--',
+        percentage: '--',
         trend: '--',
         trendLabel: '--',
         trendColor: TREND_COLORS.neutral
