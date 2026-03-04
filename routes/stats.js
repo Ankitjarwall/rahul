@@ -130,7 +130,7 @@ const formatNoTrend = (value) => {
         value: value,
         previousValue: '--',
         percentage: '--',
-        trend: '--',
+        trend: false,
         trendLabel: '--',
         trendColor: TREND_COLORS.neutral
     };
