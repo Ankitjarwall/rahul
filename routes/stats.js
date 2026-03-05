@@ -139,9 +139,27 @@ const formatNoTrend = (value) => {
 // GET /api/stats/dashboard
 router.get('/dashboard', async (req, res) => {
     try {
+        // Log incoming request
+        console.log('\n========== STATS API CALL ==========');
+        console.log('Full Query:', req.query);
+        console.log('Filter:', req.query.filter);
+        console.log('Start Date:', req.query.startDate);
+        console.log('End Date:', req.query.endDate);
+        console.log('Raw URL:', req.originalUrl);
+        console.log('=====================================\n');
+
         const { filter, startDate, endDate } = req.query;
         const { from, to } = getDateRange(filter, startDate, endDate);
         const { prevFrom, prevTo } = getPreviousPeriod(from, to);
+
+        // Log calculated date ranges
+        console.log('Calculated Date Range:');
+        console.log('  From:', from.toISOString());
+        console.log('  To:', to.toISOString());
+        console.log('Previous Period:');
+        console.log('  From:', prevFrom.toISOString());
+        console.log('  To:', prevTo.toISOString());
+        console.log('=====================================\n');
 
         // Run all queries in parallel for performance
         const [
