@@ -165,6 +165,25 @@ const formatNoTrend = (value, isCurrency = false) => {
     };
 };
 
+// Helper to ensure line charts have at least 2 data points
+const ensureMinimumDataPoints = (labels, data, isCurrency = false) => {
+    if (labels.length === 0) {
+        // No data at all - return two zero points
+        return {
+            labels: ['Start', 'End'],
+            data: isCurrency ? ['₹0', '₹0'] : [0, 0]
+        };
+    } else if (labels.length === 1) {
+        // Only one point - add a zero starting point
+        return {
+            labels: ['Start', ...labels],
+            data: isCurrency ? ['₹0', ...data] : [0, ...data]
+        };
+    }
+    // Already has 2+ points
+    return { labels, data };
+};
+
 // Helper to parse encoded query string from filter parameter
 const parseEncodedFilter = (filterValue) => {
     let filter = filterValue;
@@ -525,8 +544,11 @@ router.get('/dashboard', async (req, res) => {
                     new_users_trend: {
                         chart_type: 'line_chart',
                         title: 'New User Registrations',
-                        labels: formatTrendData(newUsersTrend).labels,
-                        data: newUsersTrend.map(d => d.count)
+                        ...ensureMinimumDataPoints(
+                            formatTrendData(newUsersTrend).labels,
+                            newUsersTrend.map(d => d.count),
+                            false
+                        )
                     },
                     users_by_state: {
                         chart_type: 'bar_chart',
@@ -553,14 +575,20 @@ router.get('/dashboard', async (req, res) => {
                     orders_trend: {
                         chart_type: 'line_chart',
                         title: 'Orders Over Time',
-                        labels: formatTrendData(ordersTrend).labels,
-                        data: ordersTrend.map(d => d.count)
+                        ...ensureMinimumDataPoints(
+                            formatTrendData(ordersTrend).labels,
+                            ordersTrend.map(d => d.count),
+                            false
+                        )
                     },
                     revenue_trend: {
                         chart_type: 'line_chart',
                         title: 'Revenue Over Time',
-                        labels: formatTrendData(revenueTrend).labels,
-                        data: revenueTrend.map(d => formatIndianCurrency(Math.round(d.revenue)))
+                        ...ensureMinimumDataPoints(
+                            formatTrendData(revenueTrend).labels,
+                            revenueTrend.map(d => formatIndianCurrency(Math.round(d.revenue))),
+                            true
+                        )
                     },
                     payment_methods: {
                         chart_type: 'pie_chart',
@@ -575,15 +603,18 @@ router.get('/dashboard', async (req, res) => {
                         labels: ordersByState.map(d => d._id || 'Unknown'),
                         data: ordersByState.map(d => d.count)
                     },
-                    avg_order_value_trend: {
-                        chart_type: 'line_chart',
-                        title: 'Average Order Value Trend',
-                        labels: formatTrendData(revenueTrend).labels,
-                        data: revenueTrend.map((d, i) => {
+                    avg_order_value_trend: (() => {
+                        const avgLabels = formatTrendData(revenueTrend).labels;
+                        const avgData = revenueTrend.map((d, i) => {
                             const orderCount = ordersTrend[i]?.count || 1;
                             return formatIndianCurrency(Math.round(d.revenue / orderCount));
-                        })
-                    }
+                        });
+                        return {
+                            chart_type: 'line_chart',
+                            title: 'Average Order Value Trend',
+                            ...ensureMinimumDataPoints(avgLabels, avgData, true)
+                        };
+                    })()
                 },
 
                 products: {
@@ -603,8 +634,11 @@ router.get('/dashboard', async (req, res) => {
                     product_sales_trend: {
                         chart_type: 'line_chart',
                         title: 'Total Products Sold Over Time',
-                        labels: formatTrendData(ordersTrend).labels,
-                        data: ordersTrend.map(d => d.count * 2)
+                        ...ensureMinimumDataPoints(
+                            formatTrendData(ordersTrend).labels,
+                            ordersTrend.map(d => d.count * 2),
+                            false
+                        )
                     },
                     free_products_given: {
                         chart_type: 'bar_chart',
