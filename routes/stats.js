@@ -136,19 +136,61 @@ const formatNoTrend = (value) => {
     };
 };
 
+// Helper to parse encoded query string from filter parameter
+const parseEncodedFilter = (filterValue) => {
+    let filter = filterValue;
+    let startDate = null;
+    let endDate = null;
+
+    if (filterValue && (filterValue.includes('&') || filterValue.includes('startDate') || filterValue.includes('endDate'))) {
+        // Decode the filter value first
+        const decoded = decodeURIComponent(filterValue);
+
+        // Parse the encoded query string
+        const parts = decoded.split('&');
+
+        for (const part of parts) {
+            if (part.includes('=')) {
+                const [key, value] = part.split('=');
+                if (key === 'startDate') {
+                    startDate = value;
+                } else if (key === 'endDate') {
+                    endDate = value;
+                }
+            } else {
+                // This is the filter value (e.g., "custom")
+                filter = part;
+            }
+        }
+    }
+
+    return { filter, startDate, endDate };
+};
+
 // GET /api/stats/dashboard
 router.get('/dashboard', async (req, res) => {
     try {
         // Log incoming request
         console.log('\n========== STATS API CALL ==========');
         console.log('Full Query:', req.query);
-        console.log('Filter:', req.query.filter);
-        console.log('Start Date:', req.query.startDate);
-        console.log('End Date:', req.query.endDate);
         console.log('Raw URL:', req.originalUrl);
+
+        // Get query parameters
+        let { filter, startDate, endDate } = req.query;
+
+        // Fix: Parse encoded filter if it contains startDate/endDate
+        if (filter && (filter.includes('startDate') || filter.includes('endDate') || filter.includes('&'))) {
+            const parsed = parseEncodedFilter(filter);
+            filter = parsed.filter;
+            startDate = parsed.startDate || startDate;
+            endDate = parsed.endDate || endDate;
+        }
+
+        console.log('Parsed Filter:', filter);
+        console.log('Parsed Start Date:', startDate);
+        console.log('Parsed End Date:', endDate);
         console.log('=====================================\n');
 
-        const { filter, startDate, endDate } = req.query;
         const { from, to } = getDateRange(filter, startDate, endDate);
         const { prevFrom, prevTo } = getPreviousPeriod(from, to);
 
