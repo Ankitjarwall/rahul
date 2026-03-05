@@ -165,19 +165,25 @@ const formatNoTrend = (value, isCurrency = false) => {
     };
 };
 
+// Helper to convert number to double format (15 -> 15.0)
+const toDouble = (num) => {
+    if (num === null || num === undefined) return 0.0;
+    return parseFloat(Number(num).toFixed(1));
+};
+
 // Helper to ensure line charts have at least 2 data points
 const ensureMinimumDataPoints = (labels, data, isCurrency = false) => {
     if (labels.length === 0) {
         // No data at all - return two zero points
         return {
             labels: ['Start', 'End'],
-            data: isCurrency ? ['₹0', '₹0'] : [0, 0]
+            data: isCurrency ? ['₹0', '₹0'] : [0.0, 0.0]
         };
     } else if (labels.length === 1) {
         // Only one point - add a zero starting point
         return {
             labels: ['Start', ...labels],
-            data: isCurrency ? ['₹0', ...data] : [0, ...data]
+            data: isCurrency ? ['₹0', ...data] : [0.0, ...data]
         };
     }
     // Already has 2+ points
@@ -546,7 +552,7 @@ router.get('/dashboard', async (req, res) => {
                         title: 'New User Registrations',
                         ...ensureMinimumDataPoints(
                             formatTrendData(newUsersTrend).labels,
-                            newUsersTrend.map(d => d.count),
+                            newUsersTrend.map(d => toDouble(d.count)),
                             false
                         )
                     },
@@ -554,13 +560,13 @@ router.get('/dashboard', async (req, res) => {
                         chart_type: 'bar_chart',
                         title: 'Users by State',
                         labels: usersByState.map(d => d._id || 'Unknown'),
-                        data: usersByState.map(d => d.count)
+                        data: usersByState.map(d => toDouble(d.count))
                     },
                     dues_status: {
                         chart_type: 'donut_chart',
                         title: 'Customer Dues Status',
                         labels: ['No Dues', 'Has Dues'],
-                        data: [duesData.noDues, duesData.withDues],
+                        data: [toDouble(duesData.noDues), toDouble(duesData.withDues)],
                         colors: ['#4CAF50', '#F44336']
                     },
                     top_customers: {
@@ -577,7 +583,7 @@ router.get('/dashboard', async (req, res) => {
                         title: 'Orders Over Time',
                         ...ensureMinimumDataPoints(
                             formatTrendData(ordersTrend).labels,
-                            ordersTrend.map(d => d.count),
+                            ordersTrend.map(d => toDouble(d.count)),
                             false
                         )
                     },
@@ -594,14 +600,14 @@ router.get('/dashboard', async (req, res) => {
                         chart_type: 'pie_chart',
                         title: 'Payment Method Distribution',
                         labels: paymentMethods.map(d => d._id || 'Unknown'),
-                        data: paymentMethods.map(d => d.count),
+                        data: paymentMethods.map(d => toDouble(d.count)),
                         colors: ['#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#607D8B']
                     },
                     orders_by_state: {
                         chart_type: 'bar_chart',
                         title: 'Orders by State',
                         labels: ordersByState.map(d => d._id || 'Unknown'),
-                        data: ordersByState.map(d => d.count)
+                        data: ordersByState.map(d => toDouble(d.count))
                     },
                     avg_order_value_trend: (() => {
                         const avgLabels = formatTrendData(revenueTrend).labels;
@@ -622,7 +628,7 @@ router.get('/dashboard', async (req, res) => {
                         chart_type: 'bar_chart',
                         title: 'Top 5 Selling Products (by Quantity)',
                         labels: topSellingProducts.map(d => d._id || 'Unknown'),
-                        data: topSellingProducts.map(d => d.totalQuantity)
+                        data: topSellingProducts.map(d => toDouble(d.totalQuantity))
                     },
                     product_revenue_share: {
                         chart_type: 'donut_chart',
@@ -636,7 +642,7 @@ router.get('/dashboard', async (req, res) => {
                         title: 'Total Products Sold Over Time',
                         ...ensureMinimumDataPoints(
                             formatTrendData(ordersTrend).labels,
-                            ordersTrend.map(d => d.count * 2),
+                            ordersTrend.map(d => toDouble(d.count * 2)),
                             false
                         )
                     },
@@ -644,7 +650,7 @@ router.get('/dashboard', async (req, res) => {
                         chart_type: 'bar_chart',
                         title: 'Free Products Given (Top 5)',
                         labels: freeProductsStats.map(d => d._id || 'Unknown'),
-                        data: freeProductsStats.map(d => d.count)
+                        data: freeProductsStats.map(d => toDouble(d.count))
                     }
                 }
             },
