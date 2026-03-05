@@ -101,6 +101,39 @@ const TREND_COLORS = {
     neutral: '#FFFFFF00' // Transparent
 };
 
+// Helper to format number in Indian currency format (₹ 10,00,000)
+const formatIndianCurrency = (num) => {
+    if (num === null || num === undefined || num === '--') return '--';
+    const number = Math.round(num);
+    const numStr = number.toString();
+
+    // Handle negative numbers
+    const isNegative = number < 0;
+    const absNumStr = Math.abs(number).toString();
+
+    // Indian formatting: first 3 digits from right, then groups of 2
+    let result = '';
+    const len = absNumStr.length;
+
+    if (len <= 3) {
+        result = absNumStr;
+    } else {
+        // Last 3 digits
+        result = absNumStr.slice(-3);
+        // Remaining digits in groups of 2
+        let remaining = absNumStr.slice(0, -3);
+        while (remaining.length > 2) {
+            result = remaining.slice(-2) + ',' + result;
+            remaining = remaining.slice(0, -2);
+        }
+        if (remaining.length > 0) {
+            result = remaining + ',' + result;
+        }
+    }
+
+    return (isNegative ? '-' : '') + '₹' + result;
+};
+
 // Helper to calculate percentage change
 const calculatePercentageChange = (current, previous) => {
     if (previous === 0) {
@@ -111,12 +144,14 @@ const calculatePercentageChange = (current, previous) => {
 };
 
 // Helper to format trend info
-const formatTrend = (current, previous) => {
+const formatTrend = (current, previous, isCurrency = false) => {
     const percentage = calculatePercentageChange(current, previous);
     const isUp = percentage >= 0;
     return {
         value: current,
+        displayValue: isCurrency ? formatIndianCurrency(current) : current,
         previousValue: previous,
+        previousDisplayValue: isCurrency ? formatIndianCurrency(previous) : previous,
         percentage: percentage,
         trend: isUp ? true : false,
         trendLabel: isUp ? `+${percentage}%` : `${percentage}%`,
@@ -125,10 +160,12 @@ const formatTrend = (current, previous) => {
 };
 
 // Helper for metrics without trend (all-time or cumulative)
-const formatNoTrend = (value) => {
+const formatNoTrend = (value, isCurrency = false) => {
     return {
         value: value,
+        displayValue: isCurrency ? formatIndianCurrency(value) : value,
         previousValue: '--',
+        previousDisplayValue: '--',
         percentage: '--',
         trend: false,
         trendLabel: '--',
@@ -467,24 +504,28 @@ router.get('/dashboard', async (req, res) => {
             success: true,
             data: {
                 summary: {
-                    totalUsers: formatNoTrend(totalUsers),
-                    totalProducts: formatNoTrend(totalProducts),
+                    totalUsers: formatNoTrend(totalUsers, false),
+                    totalProducts: formatNoTrend(totalProducts, false),
                     totalOrders: formatTrend(
                         currentStats.totalOrders,
-                        prevStats.totalOrders
+                        prevStats.totalOrders,
+                        false
                     ),
                     totalRevenue: formatTrend(
                         Math.round(currentStats.totalRevenue || 0),
-                        Math.round(prevStats.totalRevenue || 0)
+                        Math.round(prevStats.totalRevenue || 0),
+                        true // Currency
                     ),
-                    totalDues: formatNoTrend(Math.round(currentDues.totalDues || 0)),
+                    totalDues: formatNoTrend(Math.round(currentDues.totalDues || 0), true), // Currency
                     avgOrderValue: formatTrend(
                         Math.round(currentStats.avgOrderValue || 0),
-                        Math.round(prevStats.avgOrderValue || 0)
+                        Math.round(prevStats.avgOrderValue || 0),
+                        true // Currency
                     ),
                     newUsers: formatTrend(
                         newUsersCount,
-                        prevNewUsersCount
+                        prevNewUsersCount,
+                        false
                     )
                 },
 
@@ -512,7 +553,8 @@ router.get('/dashboard', async (req, res) => {
                         chart_type: 'bar_chart',
                         title: 'Top 5 Customers by Revenue',
                         labels: topCustomers.map(d => d._id || 'Unknown'),
-                        data: topCustomers.map(d => Math.round(d.totalSpent))
+                        data: topCustomers.map(d => Math.round(d.totalSpent)),
+                        displayData: topCustomers.map(d => formatIndianCurrency(Math.round(d.totalSpent)))
                     }
                 },
 
@@ -527,7 +569,8 @@ router.get('/dashboard', async (req, res) => {
                         chart_type: 'line_chart',
                         title: 'Revenue Over Time',
                         labels: formatTrendData(revenueTrend).labels,
-                        data: revenueTrend.map(d => Math.round(d.revenue))
+                        data: revenueTrend.map(d => Math.round(d.revenue)),
+                        displayData: revenueTrend.map(d => formatIndianCurrency(Math.round(d.revenue)))
                     },
                     payment_methods: {
                         chart_type: 'pie_chart',
@@ -549,6 +592,10 @@ router.get('/dashboard', async (req, res) => {
                         data: revenueTrend.map((d, i) => {
                             const orderCount = ordersTrend[i]?.count || 1;
                             return Math.round(d.revenue / orderCount);
+                        }),
+                        displayData: revenueTrend.map((d, i) => {
+                            const orderCount = ordersTrend[i]?.count || 1;
+                            return formatIndianCurrency(Math.round(d.revenue / orderCount));
                         })
                     }
                 },
@@ -565,6 +612,7 @@ router.get('/dashboard', async (req, res) => {
                         title: 'Revenue by Top Products',
                         labels: productRevenue.map(d => d._id || 'Unknown'),
                         data: productRevenue.map(d => Math.round(d.revenue)),
+                        displayData: productRevenue.map(d => formatIndianCurrency(Math.round(d.revenue))),
                         colors: ['#E91E63', '#3F51B5', '#009688', '#FF5722', '#795548']
                     },
                     product_sales_trend: {
