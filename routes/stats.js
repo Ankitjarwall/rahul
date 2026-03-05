@@ -148,28 +148,20 @@ const formatTrend = (current, previous, isCurrency = false) => {
     const percentage = calculatePercentageChange(current, previous);
     const isUp = percentage >= 0;
     return {
-        value: current,
-        displayValue: isCurrency ? formatIndianCurrency(current) : current,
-        previousValue: previous,
-        previousDisplayValue: isCurrency ? formatIndianCurrency(previous) : previous,
-        percentage: percentage,
+        value: isCurrency ? formatIndianCurrency(current) : current,
+        previousValue: isCurrency ? formatIndianCurrency(previous) : previous,
         trend: isUp ? true : false,
-        trendLabel: isUp ? `+${percentage}%` : `${percentage}%`,
-        trendColor: isUp ? TREND_COLORS.up : TREND_COLORS.down
+        trendLabel: isUp ? `+${percentage}%` : `${percentage}%`
     };
 };
 
 // Helper for metrics without trend (all-time or cumulative)
 const formatNoTrend = (value, isCurrency = false) => {
     return {
-        value: value,
-        displayValue: isCurrency ? formatIndianCurrency(value) : value,
+        value: isCurrency ? formatIndianCurrency(value) : value,
         previousValue: '--',
-        previousDisplayValue: '--',
-        percentage: '--',
         trend: false,
-        trendLabel: '--',
-        trendColor: TREND_COLORS.neutral
+        trendLabel: '--'
     };
 };
 
@@ -553,8 +545,7 @@ router.get('/dashboard', async (req, res) => {
                         chart_type: 'bar_chart',
                         title: 'Top 5 Customers by Revenue',
                         labels: topCustomers.map(d => d._id || 'Unknown'),
-                        data: topCustomers.map(d => Math.round(d.totalSpent)),
-                        displayData: topCustomers.map(d => formatIndianCurrency(Math.round(d.totalSpent)))
+                        data: topCustomers.map(d => formatIndianCurrency(Math.round(d.totalSpent)))
                     }
                 },
 
@@ -569,8 +560,7 @@ router.get('/dashboard', async (req, res) => {
                         chart_type: 'line_chart',
                         title: 'Revenue Over Time',
                         labels: formatTrendData(revenueTrend).labels,
-                        data: revenueTrend.map(d => Math.round(d.revenue)),
-                        displayData: revenueTrend.map(d => formatIndianCurrency(Math.round(d.revenue)))
+                        data: revenueTrend.map(d => formatIndianCurrency(Math.round(d.revenue)))
                     },
                     payment_methods: {
                         chart_type: 'pie_chart',
@@ -591,10 +581,6 @@ router.get('/dashboard', async (req, res) => {
                         labels: formatTrendData(revenueTrend).labels,
                         data: revenueTrend.map((d, i) => {
                             const orderCount = ordersTrend[i]?.count || 1;
-                            return Math.round(d.revenue / orderCount);
-                        }),
-                        displayData: revenueTrend.map((d, i) => {
-                            const orderCount = ordersTrend[i]?.count || 1;
                             return formatIndianCurrency(Math.round(d.revenue / orderCount));
                         })
                     }
@@ -611,8 +597,7 @@ router.get('/dashboard', async (req, res) => {
                         chart_type: 'donut_chart',
                         title: 'Revenue by Top Products',
                         labels: productRevenue.map(d => d._id || 'Unknown'),
-                        data: productRevenue.map(d => Math.round(d.revenue)),
-                        displayData: productRevenue.map(d => formatIndianCurrency(Math.round(d.revenue))),
+                        data: productRevenue.map(d => formatIndianCurrency(Math.round(d.revenue))),
                         colors: ['#E91E63', '#3F51B5', '#009688', '#FF5722', '#795548']
                     },
                     product_sales_trend: {
