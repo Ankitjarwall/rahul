@@ -677,14 +677,14 @@ router.get('/dashboard', async (req, res) => {
                     top_customers: (() => {
                         const top6 = topCustomers.slice(0, 6);
                         const labels = top6.map((d, i) => (i + 1).toString());
-                        const values = top6.map(d => formatIndianCurrency(Math.round(d.totalSpent)));
+                        const values = top6.map(d => toDouble(d.totalSpent));
                         const legends = top6.map((d, i) => `${i + 1} - ${d._id || 'Unknown'}`);
 
                         // Add "Others" if there are more than 6
                         if (topCustomers.length > 6) {
                             labels.push('Others');
                             const othersTotal = topCustomers.slice(6).reduce((sum, d) => sum + (d.totalSpent || 0), 0);
-                            values.push(formatIndianCurrency(Math.round(othersTotal)));
+                            values.push(toDouble(othersTotal));
                             legends.push('Others');
                         }
 
@@ -712,8 +712,8 @@ router.get('/dashboard', async (req, res) => {
                         title: 'Revenue Over Time',
                         ...ensureMinimumDataPoints(
                             formatTrendData(revenueTrend).labels,
-                            revenueTrend.map(d => formatIndianCurrency(Math.round(d.revenue))),
-                            true
+                            revenueTrend.map(d => toDouble(d.revenue)),
+                            false
                         )
                     },
                     payment_methods: {
@@ -746,12 +746,12 @@ router.get('/dashboard', async (req, res) => {
                         const avgLabels = formatTrendData(revenueTrend).labels;
                         const avgData = revenueTrend.map((d, i) => {
                             const orderCount = ordersTrend[i]?.count || 1;
-                            return formatIndianCurrency(Math.round(d.revenue / orderCount));
+                            return toDouble(d.revenue / orderCount);
                         });
                         return {
                             chart_type: 'line_chart',
                             title: 'Average Order Value Trend',
-                            ...ensureMinimumDataPoints(avgLabels, avgData, true)
+                            ...ensureMinimumDataPoints(avgLabels, avgData, false)
                         };
                     })()
                 },
@@ -771,8 +771,8 @@ router.get('/dashboard', async (req, res) => {
                         title: 'Revenue by Top Products',
                         data: limitChartDataWithOthers(
                             productRevenue.map(d => d._id || 'Unknown'),
-                            productRevenue.map(d => formatIndianCurrency(Math.round(d.revenue))),
-                            true
+                            productRevenue.map(d => toDouble(d.revenue)),
+                            false
                         ),
                         colors: ['#E91E63', '#3F51B5', '#009688', '#FF5722', '#795548', '#2196F3', '#4CAF50']
                     },
