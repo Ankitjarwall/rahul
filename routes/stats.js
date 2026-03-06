@@ -179,7 +179,40 @@ const formatChartData = (labels, values) => {
     }));
 };
 
-// Helper to ensure line charts have at least 2 data points
+// Helper to limit chart data to 7 items (6 top + "Others")
+const limitChartDataWithOthers = (labels, values, isCurrency = false) => {
+    if (labels.length <= 7) {
+        return formatChartData(labels, values);
+    }
+
+    // Take top 6 items
+    const top6Labels = labels.slice(0, 6);
+    const top6Values = values.slice(0, 6);
+
+    // Sum up the rest as "Others"
+    const othersValues = values.slice(6);
+    let othersTotal;
+
+    if (isCurrency) {
+        // For currency values, we need to extract numbers, sum, then format
+        othersTotal = othersValues.reduce((sum, val) => {
+            // Extract number from currency string like "₹1,00,000"
+            const numStr = String(val).replace(/[₹,]/g, '');
+            return sum + (parseFloat(numStr) || 0);
+        }, 0);
+        othersTotal = formatIndianCurrency(Math.round(othersTotal));
+    } else {
+        // For numeric values, just sum them
+        othersTotal = toDouble(othersValues.reduce((sum, val) => sum + (parseFloat(val) || 0), 0));
+    }
+
+    return formatChartData(
+        [...top6Labels, 'Others'],
+        [...top6Values, othersTotal]
+    );
+};
+
+// Helper to ensure line charts have at least 2 data points and max 7
 const ensureMinimumDataPoints = (labels, values, isCurrency = false) => {
     let finalLabels = labels;
     let finalValues = values;
@@ -192,6 +225,12 @@ const ensureMinimumDataPoints = (labels, values, isCurrency = false) => {
         // Only one point - add a zero starting point
         finalLabels = ['Start', ...labels];
         finalValues = isCurrency ? ['₹0', ...values] : [0.0, ...values];
+    }
+
+    // Limit to 7 data points for line charts (take last 7 for time series)
+    if (finalLabels.length > 7) {
+        finalLabels = finalLabels.slice(-7);
+        finalValues = finalValues.slice(-7);
     }
 
     return {
@@ -381,7 +420,7 @@ router.get('/dashboard', async (req, res) => {
                     }
                 },
                 { $sort: { count: -1 } },
-                { $limit: 10 }
+                { $limit: 20 }
             ]),
 
             // Dues status
@@ -406,7 +445,7 @@ router.get('/dashboard', async (req, res) => {
                     }
                 },
                 { $sort: { totalSpent: -1 } },
-                { $limit: 5 }
+                { $limit: 20 }
             ]),
 
             // Orders trend (by month)
@@ -462,7 +501,7 @@ router.get('/dashboard', async (req, res) => {
                     }
                 },
                 { $sort: { count: -1 } },
-                { $limit: 10 }
+                { $limit: 20 }
             ]),
 
             // Top selling products
@@ -477,7 +516,7 @@ router.get('/dashboard', async (req, res) => {
                     }
                 },
                 { $sort: { totalQuantity: -1 } },
-                { $limit: 5 }
+                { $limit: 20 }
             ]),
 
             // Product revenue share
@@ -491,7 +530,7 @@ router.get('/dashboard', async (req, res) => {
                     }
                 },
                 { $sort: { revenue: -1 } },
-                { $limit: 5 }
+                { $limit: 20 }
             ]),
 
             // Free products given
@@ -505,7 +544,7 @@ router.get('/dashboard', async (req, res) => {
                     }
                 },
                 { $sort: { count: -1 } },
-                { $limit: 5 }
+                { $limit: 20 }
             ])
         ]);
 
@@ -568,9 +607,10 @@ router.get('/dashboard', async (req, res) => {
                     users_by_state: {
                         chart_type: 'bar_chart',
                         title: 'Users by State',
-                        data: formatChartData(
+                        data: limitChartDataWithOthers(
                             usersByState.map(d => d._id || 'Unknown'),
-                            usersByState.map(d => toDouble(d.count))
+                            usersByState.map(d => toDouble(d.count)),
+                            false
                         )
                     },
                     dues_status: {
@@ -584,10 +624,11 @@ router.get('/dashboard', async (req, res) => {
                     },
                     top_customers: {
                         chart_type: 'bar_chart',
-                        title: 'Top 5 Customers by Revenue',
-                        data: formatChartData(
+                        title: 'Top Customers by Revenue',
+                        data: limitChartDataWithOthers(
                             topCustomers.map(d => d._id || 'Unknown'),
-                            topCustomers.map(d => formatIndianCurrency(Math.round(d.totalSpent)))
+                            topCustomers.map(d => formatIndianCurrency(Math.round(d.totalSpent))),
+                            true
                         )
                     }
                 },
@@ -614,18 +655,20 @@ router.get('/dashboard', async (req, res) => {
                     payment_methods: {
                         chart_type: 'pie_chart',
                         title: 'Payment Method Distribution',
-                        data: formatChartData(
+                        data: limitChartDataWithOthers(
                             paymentMethods.map(d => d._id || 'Unknown'),
-                            paymentMethods.map(d => toDouble(d.count))
+                            paymentMethods.map(d => toDouble(d.count)),
+                            false
                         ),
-                        colors: ['#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#607D8B']
+                        colors: ['#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#607D8B', '#E91E63', '#795548']
                     },
                     orders_by_state: {
                         chart_type: 'bar_chart',
                         title: 'Orders by State',
-                        data: formatChartData(
+                        data: limitChartDataWithOthers(
                             ordersByState.map(d => d._id || 'Unknown'),
-                            ordersByState.map(d => toDouble(d.count))
+                            ordersByState.map(d => toDouble(d.count)),
+                            false
                         )
                     },
                     avg_order_value_trend: (() => {
@@ -645,20 +688,22 @@ router.get('/dashboard', async (req, res) => {
                 products: {
                     top_selling_products: {
                         chart_type: 'bar_chart',
-                        title: 'Top 5 Selling Products (by Quantity)',
-                        data: formatChartData(
+                        title: 'Top Selling Products (by Quantity)',
+                        data: limitChartDataWithOthers(
                             topSellingProducts.map(d => d._id || 'Unknown'),
-                            topSellingProducts.map(d => toDouble(d.totalQuantity))
+                            topSellingProducts.map(d => toDouble(d.totalQuantity)),
+                            false
                         )
                     },
                     product_revenue_share: {
                         chart_type: 'donut_chart',
                         title: 'Revenue by Top Products',
-                        data: formatChartData(
+                        data: limitChartDataWithOthers(
                             productRevenue.map(d => d._id || 'Unknown'),
-                            productRevenue.map(d => formatIndianCurrency(Math.round(d.revenue)))
+                            productRevenue.map(d => formatIndianCurrency(Math.round(d.revenue))),
+                            true
                         ),
-                        colors: ['#E91E63', '#3F51B5', '#009688', '#FF5722', '#795548']
+                        colors: ['#E91E63', '#3F51B5', '#009688', '#FF5722', '#795548', '#2196F3', '#4CAF50']
                     },
                     product_sales_trend: {
                         chart_type: 'line_chart',
@@ -671,10 +716,11 @@ router.get('/dashboard', async (req, res) => {
                     },
                     free_products_given: {
                         chart_type: 'bar_chart',
-                        title: 'Free Products Given (Top 5)',
-                        data: formatChartData(
+                        title: 'Free Products Given',
+                        data: limitChartDataWithOthers(
                             freeProductsStats.map(d => d._id || 'Unknown'),
-                            freeProductsStats.map(d => toDouble(d.count))
+                            freeProductsStats.map(d => toDouble(d.count)),
+                            false
                         )
                     }
                 }
