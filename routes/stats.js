@@ -674,15 +674,27 @@ router.get('/dashboard', async (req, res) => {
                         ),
                         colors: ['#4CAF50', '#F44336']
                     },
-                    top_customers: {
-                        chart_type: 'bar_chart',
-                        title: 'Top Customers by Revenue',
-                        data: limitChartDataWithOthers(
-                            topCustomers.map(d => d._id || 'Unknown'),
-                            topCustomers.map(d => formatIndianCurrency(Math.round(d.totalSpent))),
-                            true
-                        )
-                    }
+                    top_customers: (() => {
+                        const top6 = topCustomers.slice(0, 6);
+                        const labels = top6.map((d, i) => (i + 1).toString());
+                        const values = top6.map(d => formatIndianCurrency(Math.round(d.totalSpent)));
+                        const legends = top6.map((d, i) => `${i + 1} - ${d._id || 'Unknown'}`);
+
+                        // Add "Others" if there are more than 6
+                        if (topCustomers.length > 6) {
+                            labels.push('Others');
+                            const othersTotal = topCustomers.slice(6).reduce((sum, d) => sum + (d.totalSpent || 0), 0);
+                            values.push(formatIndianCurrency(Math.round(othersTotal)));
+                            legends.push('Others');
+                        }
+
+                        return {
+                            chart_type: 'bar_chart',
+                            title: 'Top Customers by Revenue',
+                            data: formatChartData(labels, values),
+                            legends: legends
+                        };
+                    })()
                 },
 
                 orders: {
