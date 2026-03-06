@@ -652,13 +652,17 @@ router.get('/dashboard', async (req, res) => {
                     users_by_state: (() => {
                         const stateLabels = usersByState.map(d => getStateAbbreviation(d._id));
                         const stateValues = usersByState.map(d => toDouble(d.count));
-                        const fullNames = usersByState.slice(0, 6).map(d => d._id || 'Unknown');
-                        if (usersByState.length > 6) fullNames.push('Others');
+                        const legends = usersByState.slice(0, 6).map(d => {
+                            const abbr = getStateAbbreviation(d._id);
+                            const fullName = d._id || 'Unknown';
+                            return `${abbr} - ${fullName}`;
+                        });
+                        if (usersByState.length > 6) legends.push('Others');
                         return {
                             chart_type: 'bar_chart',
                             title: 'Users by State',
                             data: limitChartDataWithOthers(stateLabels, stateValues, false),
-                            legends: fullNames
+                            legends: legends
                         };
                     })(),
                     dues_status: {
@@ -713,13 +717,17 @@ router.get('/dashboard', async (req, res) => {
                     orders_by_state: (() => {
                         const stateLabels = ordersByState.map(d => getStateAbbreviation(d._id));
                         const stateValues = ordersByState.map(d => toDouble(d.count));
-                        const fullNames = ordersByState.slice(0, 6).map(d => d._id || 'Unknown');
-                        if (ordersByState.length > 6) fullNames.push('Others');
+                        const legends = ordersByState.slice(0, 6).map(d => {
+                            const abbr = getStateAbbreviation(d._id);
+                            const fullName = d._id || 'Unknown';
+                            return `${abbr} - ${fullName}`;
+                        });
+                        if (ordersByState.length > 6) legends.push('Others');
                         return {
                             chart_type: 'bar_chart',
                             title: 'Orders by State',
                             data: limitChartDataWithOthers(stateLabels, stateValues, false),
-                            legends: fullNames
+                            legends: legends
                         };
                     })(),
                     avg_order_value_trend: (() => {
