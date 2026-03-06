@@ -649,15 +649,18 @@ router.get('/dashboard', async (req, res) => {
                             false
                         )
                     },
-                    users_by_state: {
-                        chart_type: 'bar_chart',
-                        title: 'Users by State',
-                        data: limitChartDataWithOthers(
-                            usersByState.map(d => getStateAbbreviation(d._id)),
-                            usersByState.map(d => toDouble(d.count)),
-                            false
-                        )
-                    },
+                    users_by_state: (() => {
+                        const stateLabels = usersByState.map(d => getStateAbbreviation(d._id));
+                        const stateValues = usersByState.map(d => toDouble(d.count));
+                        const fullNames = usersByState.slice(0, 6).map(d => d._id || 'Unknown');
+                        if (usersByState.length > 6) fullNames.push('Others');
+                        return {
+                            chart_type: 'bar_chart',
+                            title: 'Users by State',
+                            data: limitChartDataWithOthers(stateLabels, stateValues, false),
+                            legends: fullNames
+                        };
+                    })(),
                     dues_status: {
                         chart_type: 'donut_chart',
                         title: 'Customer Dues Status',
@@ -707,15 +710,18 @@ router.get('/dashboard', async (req, res) => {
                         ),
                         colors: ['#2196F3', '#4CAF50', '#FF9800', '#9C27B0', '#607D8B', '#E91E63', '#795548']
                     },
-                    orders_by_state: {
-                        chart_type: 'bar_chart',
-                        title: 'Orders by State',
-                        data: limitChartDataWithOthers(
-                            ordersByState.map(d => getStateAbbreviation(d._id)),
-                            ordersByState.map(d => toDouble(d.count)),
-                            false
-                        )
-                    },
+                    orders_by_state: (() => {
+                        const stateLabels = ordersByState.map(d => getStateAbbreviation(d._id));
+                        const stateValues = ordersByState.map(d => toDouble(d.count));
+                        const fullNames = ordersByState.slice(0, 6).map(d => d._id || 'Unknown');
+                        if (ordersByState.length > 6) fullNames.push('Others');
+                        return {
+                            chart_type: 'bar_chart',
+                            title: 'Orders by State',
+                            data: limitChartDataWithOthers(stateLabels, stateValues, false),
+                            legends: fullNames
+                        };
+                    })(),
                     avg_order_value_trend: (() => {
                         const avgLabels = formatTrendData(revenueTrend).labels;
                         const avgData = revenueTrend.map((d, i) => {
