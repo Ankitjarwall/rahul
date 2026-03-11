@@ -113,17 +113,17 @@ router.post('/:userId/pay', async (req, res) => {
                 mrp: 0,
                 rate: 0,
                 quantity: 1,
-                totalAmount: 0
+                totalAmount: -amount
             }],
             billing: {
                 orderWeight: 0,
                 orderAmount: 0,
                 deliveryCharges: 0,
-                totalAmount: 0,
+                totalAmount: -amount,
                 paymentMethod: paymentMethod,
                 moneyGiven: amount,
                 pastOrderDue: currentDues,
-                finalAmount: -amount // Negative to indicate payment received
+                finalAmount: currentDues - amount // Remaining dues after payment
             },
             comments: comments ? [{
                 message: `Dues Payment: ${comments}`,
@@ -141,13 +141,7 @@ router.post('/:userId/pay', async (req, res) => {
         await User.findOneAndUpdate(
             { userId: userId },
             {
-                $set: { dues: newDues },
-                $push: {
-                    comments: {
-                        message: `Dues payment of INR ${amount} received via ${paymentMethod}. Order ID: ${orderId}. Remaining dues: INR ${newDues}`,
-                        date: new Date().toISOString()
-                    }
-                }
+                $set: { dues: newDues }
             }
         );
 
@@ -186,8 +180,8 @@ router.get('/:userId/history', async (req, res) => {
             'user.userId': userId,
             orderId: { $regex: /DUE/ }
         })
-        .select('orderId billing.moneyGiven billing.pastOrderDue billing.paymentMethod comments createdAt')
-        .sort({ createdAt: -1 });
+            .select('orderId billing.moneyGiven billing.pastOrderDue billing.paymentMethod comments createdAt')
+            .sort({ createdAt: -1 });
 
         res.json({
             success: true,
