@@ -10,6 +10,7 @@ const userHistoryRoutes = require('./routes/userHistory');
 const productHistoryRoutes = require('./routes/productHistory'); // Added product history routes
 const globalSearchRouter = require('./routes/globalSearch');
 const statsRoutes = require('./routes/stats');
+const duesRoutes = require('./routes/dues');
 
 dotenv.config();
 
@@ -33,6 +34,7 @@ app.use('/api/user-history', userHistoryRoutes);
 app.use('/api/product-history', productHistoryRoutes); // Added product history routes
 app.use('/api/search', globalSearchRouter);
 app.use('/api/stats', statsRoutes);
+app.use('/api/dues', duesRoutes);
 
 // Root Route
 app.get('/', (req, res) => {
