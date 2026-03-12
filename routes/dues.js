@@ -145,6 +145,19 @@ router.post('/:userId/pay', async (req, res) => {
             }
         );
 
+        // Format date and time
+        const now = new Date();
+        const paymentDate = now.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        const paymentTime = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        }).replace(' ', '');
+
         res.status(201).json({
             success: true,
             message: 'Dues payment recorded successfully',
@@ -156,7 +169,9 @@ router.post('/:userId/pay', async (req, res) => {
                 amountPaid: amount,
                 remainingDues: newDues,
                 paymentMethod: paymentMethod,
-                duesCleared: newDues === 0
+                duesCleared: newDues === 0,
+                paymentDate: paymentDate,
+                paymentTime: paymentTime
             }
         });
     } catch (error) {
@@ -182,9 +197,26 @@ router.get('/:userId/history', async (req, res) => {
             .select('orderId billing productDetails createdAt')
             .sort({ createdAt: -1 });
 
+        // Helper function to format date and time
+        const formatDateTime = (dateObj) => {
+            const date = new Date(dateObj);
+            const formattedDate = date.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric'
+            });
+            const formattedTime = date.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            }).replace(' ', '');
+            return { date: formattedDate, time: formattedTime };
+        };
+
         // Transform orders into transaction history
         const transactionHistory = allOrders.map(order => {
             const isDuesPayment = order.orderId.includes('DUE');
+            const { date, time } = formatDateTime(order.createdAt);
 
             if (isDuesPayment) {
                 // CREDIT - Dues payment (reduces dues)
@@ -197,7 +229,8 @@ router.get('/:userId/history', async (req, res) => {
                     duesAfter: order.billing.finalAmount,
                     description: 'Dues Payment',
                     paymentMethod: order.billing.paymentMethod,
-                    date: order.createdAt
+                    date: date,
+                    time: time
                 };
             } else {
                 // Regular order - check if it added dues
@@ -221,7 +254,8 @@ router.get('/:userId/history', async (req, res) => {
                         moneyPaid: order.billing.moneyGiven,
                         description: `Order: ${productNames}${moreProducts}`,
                         paymentMethod: order.billing.paymentMethod,
-                        date: order.createdAt
+                        date: date,
+                        time: time
                     };
                 }
             }
