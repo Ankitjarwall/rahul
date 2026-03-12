@@ -165,7 +165,7 @@ router.post('/:userId/pay', async (req, res) => {
     }
 });
 
-// GET dues payment history for a user
+// GET dues transaction history for a user (both DEBIT and CREDIT)
 router.get('/:userId/history', async (req, res) => {
     try {
         const { userId } = req.params;
@@ -175,13 +175,56 @@ router.get('/:userId/history', async (req, res) => {
             return res.status(404).json({ error: `User not found with userId: ${userId}` });
         }
 
-        // Find all dues payment orders for this user
-        const duesPayments = await Order.find({
-            'user.userId': userId,
-            orderId: { $regex: /DUE/ }
+        // Find ALL orders for this user (both regular orders and dues payments)
+        const allOrders = await Order.find({
+            'user.userId': userId
         })
-            .select('orderId billing.moneyGiven billing.pastOrderDue billing.paymentMethod comments createdAt')
+            .select('orderId billing productDetails createdAt')
             .sort({ createdAt: -1 });
+
+        // Transform orders into transaction history
+        const transactionHistory = allOrders.map(order => {
+            const isDuesPayment = order.orderId.includes('DUE');
+
+            if (isDuesPayment) {
+                // CREDIT - Dues payment (reduces dues)
+                return {
+                    type: 'CREDIT',
+                    orderId: order.orderId,
+                    amount: order.billing.moneyGiven,
+                    duesBefore: order.billing.pastOrderDue,
+                    duesAfter: order.billing.finalAmount,
+                    description: 'Dues Payment',
+                    paymentMethod: order.billing.paymentMethod,
+                    date: order.createdAt
+                };
+            } else {
+                // Regular order - check if it added dues
+                const duesAdded = order.billing.finalAmount - order.billing.moneyGiven;
+                if (duesAdded > 0) {
+                    // DEBIT - Order with unpaid amount (increases dues)
+                    const productNames = order.productDetails
+                        .map(p => p.name)
+                        .slice(0, 3)
+                        .join(', ');
+                    const moreProducts = order.productDetails.length > 3
+                        ? ` +${order.productDetails.length - 3} more`
+                        : '';
+
+                    return {
+                        type: 'DEBIT',
+                        orderId: order.orderId,
+                        amount: duesAdded,
+                        orderTotal: order.billing.finalAmount,
+                        moneyPaid: order.billing.moneyGiven,
+                        description: `Order: ${productNames}${moreProducts}`,
+                        paymentMethod: order.billing.paymentMethod,
+                        date: order.createdAt
+                    };
+                }
+            }
+            return null;
+        }).filter(Boolean); // Remove null entries (orders with no dues impact)
 
         res.json({
             success: true,
@@ -189,14 +232,7 @@ router.get('/:userId/history', async (req, res) => {
                 userId: user.userId,
                 shopName: user.shopName,
                 currentDues: user.dues || 0,
-                paymentHistory: duesPayments.map(payment => ({
-                    orderId: payment.orderId,
-                    amountPaid: payment.billing.moneyGiven,
-                    duesAtPayment: payment.billing.pastOrderDue,
-                    paymentMethod: payment.billing.paymentMethod,
-                    date: payment.createdAt,
-                    comments: payment.comments
-                }))
+                transactionHistory: transactionHistory
             }
         });
     } catch (error) {

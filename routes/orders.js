@@ -124,6 +124,17 @@ router.post('/', async (req, res) => {
         const order = new Order({ ...data, orderId });
         await order.save();
 
+        // Calculate and update user dues
+        // If moneyGiven < finalAmount, dues increase (DEBIT)
+        // If moneyGiven > finalAmount, dues decrease (overpayment)
+        const orderDues = data.billing.finalAmount - data.billing.moneyGiven;
+        if (orderDues !== 0) {
+            await User.findOneAndUpdate(
+                { userId: data.user.userId },
+                { $inc: { dues: orderDues } }
+            );
+        }
+
         const { productDetails } = data;
         for (const product of productDetails) {
             const productExists = await Product.findOne({ productId: product.productId });
