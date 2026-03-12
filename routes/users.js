@@ -31,7 +31,12 @@ router.get('/:userId', async (req, res) => {
     try {
         const user = await User.findOne({ userId: req.params.userId });
         if (!user) return res.status(404).json({ error: 'User not found' });
-        res.json(user);
+
+        // Convert to object and add fullAddress
+        const userObj = user.toObject();
+        userObj.fullAddress = `${user.address || ''}, ${user.town || ''}, ${user.state || ''} - ${user.pincode || ''}`;
+
+        res.json(userObj);
     } catch (error) {
         res.status(500).json({ error: error.message });
     }
