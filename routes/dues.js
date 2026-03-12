@@ -190,6 +190,7 @@ router.get('/:userId/history', async (req, res) => {
                 // CREDIT - Dues payment (reduces dues)
                 return {
                     type: 'CREDIT',
+                    isDebit: false,
                     orderId: order.orderId,
                     amount: order.billing.moneyGiven,
                     duesBefore: order.billing.pastOrderDue,
@@ -213,6 +214,7 @@ router.get('/:userId/history', async (req, res) => {
 
                     return {
                         type: 'DEBIT',
+                        isDebit: true,
                         orderId: order.orderId,
                         amount: duesAdded,
                         orderTotal: order.billing.finalAmount,
