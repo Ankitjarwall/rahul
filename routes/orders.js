@@ -161,12 +161,15 @@ router.post('/review', async (req, res) => {
 
         // Process free products - fetch from database
         const freeProductsList = [];
+        let freeProductsWeight = 0;
         if (freeProducts && freeProducts.length > 0) {
             for (const fp of freeProducts) {
                 const freeProduct = await Product.findOne({ productId: fp.productId });
                 if (!freeProduct) {
                     return res.status(400).json({ error: `Free product not found: ${fp.productId}` });
                 }
+                const fpWeight = (freeProduct.weight || 0) * (fp.quantity || 1);
+                freeProductsWeight += fpWeight;
                 freeProductsList.push({
                     productId: freeProduct.productId,
                     name: freeProduct.name,
@@ -176,10 +179,14 @@ router.post('/review', async (req, res) => {
                     rate: 0,
                     quantity: fp.quantity || 1,
                     totalAmount: 0,
+                    item_total_weight: fpWeight,
                     image: freeProduct.image || ''
                 });
             }
         }
+
+        // Calculate total order weight (products + free products)
+        const totalOrderWeight = orderWeight + freeProductsWeight;
 
         // Build review response (same structure as saved order)
         const orderReview = {
@@ -198,7 +205,9 @@ router.post('/review', async (req, res) => {
             productDetails,
             freeProducts: freeProductsList,
             billing: {
-                orderWeight,
+                productsWeight: orderWeight,
+                freeProductsWeight: freeProductsWeight,
+                totalOrderWeight: totalOrderWeight,
                 orderAmount,
                 deliveryCharges,
                 totalAmount,
@@ -212,8 +221,10 @@ router.post('/review', async (req, res) => {
             summary: {
                 totalProducts: productDetails.length,
                 totalQuantity: productDetails.reduce((sum, p) => sum + p.quantity, 0),
+                totalOrderWeight: totalOrderWeight,
                 hasFreeProducts: freeProductsList.length > 0,
                 freeProductsCount: freeProductsList.length,
+                freeProductsQuantity: freeProductsList.reduce((sum, p) => sum + p.quantity, 0),
                 willCreateDues: newDues > 0,
                 duesCleared: pastOrderDue > 0 && newDues === 0
             },
