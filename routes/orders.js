@@ -80,70 +80,303 @@ const orderSchema = Joi.object({
     comments: Joi.array().items(commentSchema).optional()
 }).unknown(true);
 
-// ADD order
+// Simplified validation schema for new order
+const simpleOrderSchema = Joi.object({
+    userId: Joi.string().required(),
+    products: Joi.array().items(Joi.object({
+        productId: Joi.string().required(),
+        quantity: Joi.number().integer().min(1).required(),
+        rate: Joi.number().positive().optional() // Optional custom rate, otherwise use product's default
+    })).required().min(1),
+    freeProducts: Joi.array().items(Joi.object({
+        productId: Joi.string().required(),
+        quantity: Joi.number().integer().min(1).default(1)
+    })).optional(),
+    deliveryCharges: Joi.number().min(0).optional(), // Optional, will use user's delivery rate if not provided
+    moneyGiven: Joi.number().min(0).default(0),
+    paymentMethod: Joi.string().valid('Cash', 'Credit').default('Cash'),
+    comments: Joi.string().optional()
+});
+
+// ORDER REVIEW - Preview order summary before placing (no save)
+router.post('/review', async (req, res) => {
+    try {
+        const { error, value } = simpleOrderSchema.validate(req.body, { abortEarly: false });
+        if (error) {
+            const errors = error.details.map(err => err.message);
+            return res.status(400).json({ error: 'Validation failed', details: errors });
+        }
+
+        const { userId, products, freeProducts, moneyGiven, paymentMethod, comments } = value;
+        let { deliveryCharges } = value;
+
+        // Fetch user details
+        const user = await User.findOne({ userId });
+        if (!user) {
+            return res.status(400).json({ error: `User not found: ${userId}` });
+        }
+
+        // Use user's delivery rate if deliveryCharges not provided
+        if (deliveryCharges === undefined || deliveryCharges === null) {
+            deliveryCharges = user.delivery || 0;
+        }
+
+        // Validate and fetch all products
+        const productDetails = [];
+        let orderAmount = 0;
+        let orderWeight = 0;
+
+        for (const item of products) {
+            const product = await Product.findOne({ productId: item.productId });
+            if (!product) {
+                return res.status(400).json({ error: `Product not found: ${item.productId}` });
+            }
+
+            const rate = item.rate || product.rate || product.mrp;
+            const totalAmount = rate * item.quantity;
+            const itemWeight = (product.weight || 0) * item.quantity;
+
+            productDetails.push({
+                productId: product.productId,
+                name: product.name,
+                weight: product.weight || 0,
+                unit: product.unit || 'N/A',
+                mrp: product.mrp || 0,
+                rate: rate,
+                quantity: item.quantity,
+                totalAmount: totalAmount,
+                item_total_weight: itemWeight,
+                image: product.image || ''
+            });
+
+            orderAmount += totalAmount;
+            orderWeight += itemWeight;
+        }
+
+        // Calculate billing
+        const pastOrderDue = user.dues || 0;
+        const totalAmount = orderAmount + deliveryCharges;
+        const finalAmount = totalAmount + pastOrderDue;
+        const newDues = finalAmount - moneyGiven;
+
+        // Process free products - fetch from database
+        const freeProductsList = [];
+        if (freeProducts && freeProducts.length > 0) {
+            for (const fp of freeProducts) {
+                const freeProduct = await Product.findOne({ productId: fp.productId });
+                if (!freeProduct) {
+                    return res.status(400).json({ error: `Free product not found: ${fp.productId}` });
+                }
+                freeProductsList.push({
+                    productId: freeProduct.productId,
+                    name: freeProduct.name,
+                    weight: freeProduct.weight || 0,
+                    unit: freeProduct.unit || 'N/A',
+                    mrp: freeProduct.mrp || 0,
+                    rate: 0,
+                    quantity: fp.quantity || 1,
+                    totalAmount: 0,
+                    image: freeProduct.image || ''
+                });
+            }
+        }
+
+        // Build review response (same structure as saved order)
+        const orderReview = {
+            user: {
+                userId: user.userId,
+                name: user.name,
+                shopName: user.shopName,
+                userDues: pastOrderDue,
+                address: user.address || '',
+                town: user.town || '',
+                state: user.state || '',
+                pincode: user.pincode || 0,
+                fullAddress: `${user.address || ''}, ${user.town || ''}, ${user.state || ''} - ${user.pincode || ''}`,
+                contact: user.contact || []
+            },
+            productDetails,
+            freeProducts: freeProductsList,
+            billing: {
+                orderWeight,
+                orderAmount,
+                deliveryCharges,
+                totalAmount,
+                paymentMethod,
+                moneyGiven,
+                pastOrderDue,
+                finalAmount,
+                newDues,
+                dueChange: newDues - pastOrderDue
+            },
+            summary: {
+                totalProducts: productDetails.length,
+                totalQuantity: productDetails.reduce((sum, p) => sum + p.quantity, 0),
+                hasFreeProducts: freeProductsList.length > 0,
+                freeProductsCount: freeProductsList.length,
+                willCreateDues: newDues > 0,
+                duesCleared: pastOrderDue > 0 && newDues === 0
+            },
+            isfreeProducts: freeProductsList.length > 0,
+            comments: comments || ''
+        };
+
+        res.json({
+            success: true,
+            message: 'Order review generated successfully',
+            data: orderReview
+        });
+    } catch (error) {
+        console.error('Error generating order review:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// ADD order (Simplified - auto-fetches user & product details)
 router.post('/', async (req, res) => {
     console.log("Received order data:", JSON.stringify(req.body, null, 2));
     try {
-        const data = { ...req.body };
-        if (data.user && typeof data.user.pincode === 'string') {
-            data.user.pincode = parseInt(data.user.pincode, 10);
-        }
-        if (data.billing && typeof data.billing.moneyGiven === 'string') {
-            data.billing.moneyGiven = parseFloat(data.billing.moneyGiven);
-        }
-        if (data.productDetails) {
-            data.productDetails = data.productDetails.map(product => ({
-                ...product,
-                weight: typeof product.weight === 'string' ? parseFloat(product.weight) : product.weight
-            }));
-        }
-
-        const { error } = orderSchema.validate(data, { abortEarly: false });
+        const { error, value } = simpleOrderSchema.validate(req.body, { abortEarly: false });
         if (error) {
             const errors = error.details.map(err => err.message);
             console.error('Validation errors:', errors);
             return res.status(400).json({ error: 'Validation failed', details: errors });
         }
 
-        const user = await User.findOne({ userId: data.user.userId });
+        const { userId, products, freeProducts, moneyGiven, paymentMethod, comments } = value;
+        let { deliveryCharges } = value;
+
+        // Fetch user details
+        const user = await User.findOne({ userId });
         if (!user) {
-            return res.status(400).json({ error: `Invalid userId: ${data.user.userId}` });
+            return res.status(400).json({ error: `User not found: ${userId}` });
         }
 
+        // Use user's delivery rate if deliveryCharges not provided
+        if (deliveryCharges === undefined || deliveryCharges === null) {
+            deliveryCharges = user.delivery || 0;
+        }
+
+        // Validate and fetch all products BEFORE creating order
+        const productDetails = [];
+        let orderAmount = 0;
+        let orderWeight = 0;
+
+        for (const item of products) {
+            const product = await Product.findOne({ productId: item.productId });
+            if (!product) {
+                return res.status(400).json({ error: `Product not found: ${item.productId}` });
+            }
+
+            const rate = item.rate || product.rate || product.mrp;
+            const totalAmount = rate * item.quantity;
+            const itemWeight = (product.weight || 0) * item.quantity;
+
+            productDetails.push({
+                productId: product.productId,
+                name: product.name,
+                weight: product.weight || 0,
+                unit: product.unit || 'N/A',
+                mrp: product.mrp || 0,
+                rate: rate,
+                quantity: item.quantity,
+                totalAmount: totalAmount,
+                image: product.image || ''
+            });
+
+            orderAmount += totalAmount;
+            orderWeight += itemWeight;
+        }
+
+        // Calculate billing
+        const pastOrderDue = user.dues || 0;
+        const totalAmount = orderAmount + deliveryCharges;
+        const finalAmount = totalAmount + pastOrderDue;
+
+        // Process free products - fetch from database
+        const freeProductsList = [];
+        if (freeProducts && freeProducts.length > 0) {
+            for (const fp of freeProducts) {
+                const freeProduct = await Product.findOne({ productId: fp.productId });
+                if (!freeProduct) {
+                    return res.status(400).json({ error: `Free product not found: ${fp.productId}` });
+                }
+                freeProductsList.push({
+                    productId: freeProduct.productId,
+                    name: freeProduct.name,
+                    weight: freeProduct.weight || 0,
+                    unit: freeProduct.unit || 'N/A',
+                    mrp: freeProduct.mrp || 0,
+                    rate: 0,
+                    quantity: fp.quantity || 1,
+                    totalAmount: 0,
+                    image: freeProduct.image || ''
+                });
+            }
+        }
+
+        // Generate order ID
         const generateOrderId = async () => {
             const now = new Date();
             const day = String(now.getDate()).padStart(2, '0');
             const month = String(now.getMonth() + 1).padStart(2, '0');
             const year = now.getFullYear();
             const datePrefix = `${day}${month}${year}`;
-            const count = await Order.countDocuments({ orderId: { $regex: `^${datePrefix}` } });
+            const count = await Order.countDocuments({ orderId: { $regex: `^${datePrefix}OR` } });
             return `${datePrefix}OR${count + 1}`;
         };
 
         const orderId = await generateOrderId();
-        const order = new Order({ ...data, orderId });
+
+        // Build order data
+        const orderData = {
+            orderId,
+            user: {
+                userId: user.userId,
+                name: user.name,
+                shopName: user.shopName,
+                userDues: pastOrderDue,
+                address: user.address || '',
+                town: user.town || '',
+                state: user.state || '',
+                pincode: user.pincode || 0,
+                contact: user.contact || []
+            },
+            productDetails,
+            freeProducts: freeProductsList,
+            billing: {
+                orderWeight,
+                orderAmount,
+                deliveryCharges,
+                totalAmount,
+                paymentMethod,
+                moneyGiven,
+                pastOrderDue,
+                finalAmount
+            },
+            isfreeProducts: freeProductsList.length > 0,
+            comments: comments ? [{ message: comments, date: new Date().toISOString() }] : []
+        };
+
+        // Save order
+        const order = new Order(orderData);
         await order.save();
 
-        // Calculate and update user dues
-        // If moneyGiven < finalAmount, dues increase (DEBIT)
-        // If moneyGiven > finalAmount, dues decrease (overpayment)
-        const orderDues = data.billing.finalAmount - data.billing.moneyGiven;
-        if (orderDues !== 0) {
+        // Update user dues
+        const newDues = finalAmount - moneyGiven;
+        if (newDues !== pastOrderDue) {
             await User.findOneAndUpdate(
-                { userId: data.user.userId },
-                { $inc: { dues: orderDues } }
+                { userId },
+                { $set: { dues: newDues } }
             );
         }
 
-        const { productDetails } = data;
+        // Save user and product history
         for (const product of productDetails) {
-            const productExists = await Product.findOne({ productId: product.productId });
-            if (!productExists) {
-                return res.status(400).json({ error: `Invalid productId: ${product.productId}` });
-            }
+            const productDoc = await Product.findOne({ productId: product.productId });
 
             const userHistory = new UserHistory({
-                productId: productExists._id,
+                productId: productDoc._id,
                 productName: product.name,
                 userShopName: user.shopName,
                 userId: user._id,
@@ -153,7 +386,7 @@ router.post('/', async (req, res) => {
             await userHistory.save();
 
             const productHistory = new ProductHistory({
-                productId: productExists._id,
+                productId: productDoc._id,
                 productName: product.name,
                 userId: user._id,
                 userShopName: user.shopName,
@@ -163,7 +396,39 @@ router.post('/', async (req, res) => {
             await productHistory.save();
         }
 
-        res.status(201).json({ success: 'Order added successfully', order });
+        // Format response
+        const now = new Date();
+        const orderDate = now.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        const orderTime = now.toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        }).replace(' ', '');
+
+        res.status(201).json({
+            success: true,
+            message: 'Order created successfully',
+            data: {
+                orderId: order.orderId,
+                userId: user.userId,
+                shopName: user.shopName,
+                totalProducts: productDetails.length,
+                orderAmount,
+                deliveryCharges,
+                totalAmount,
+                pastOrderDue,
+                finalAmount,
+                moneyGiven,
+                remainingDues: newDues,
+                paymentMethod,
+                orderDate,
+                orderTime
+            }
+        });
     } catch (error) {
         console.error('Error creating order:', error);
         res.status(500).json({ error: error.message });
