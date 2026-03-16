@@ -13,11 +13,17 @@ const duesPaymentSchema = Joi.object({
 
 // GET user dues - Calculate and return total payable dues
 router.get('/:userId', async (req, res) => {
+    console.log("Get User Dues Request - UserId:", req.params.userId);
     try {
         const { userId } = req.params;
 
+        if (!userId || userId.trim() === '') {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+
         const user = await User.findOne({ userId });
         if (!user) {
+            console.log("User not found:", userId);
             return res.status(404).json({ error: `User not found with userId: ${userId}` });
         }
 
@@ -42,11 +48,17 @@ router.get('/:userId', async (req, res) => {
 
 // POST pay dues - Subtract paid amount from user dues and create order record
 router.post('/:userId/pay', async (req, res) => {
+    console.log("Pay Dues Request - UserId:", req.params.userId);
+    console.log("Pay Dues Data:", JSON.stringify(req.body, null, 2));
     try {
         const { userId } = req.params;
 
+        if (!userId || userId.trim() === '') {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+
         // Validate request body
-        const { error } = duesPaymentSchema.validate(req.body, { abortEarly: false });
+        const { error } = duesPaymentSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
         if (error) {
             const errors = error.details.map(err => err.message);
             return res.status(400).json({ error: 'Validation failed', details: errors });
@@ -182,11 +194,17 @@ router.post('/:userId/pay', async (req, res) => {
 
 // GET dues transaction history for a user (both DEBIT and CREDIT)
 router.get('/:userId/history', async (req, res) => {
+    console.log("Get Dues History Request - UserId:", req.params.userId);
     try {
         const { userId } = req.params;
 
+        if (!userId || userId.trim() === '') {
+            return res.status(400).json({ error: 'userId is required' });
+        }
+
         const user = await User.findOne({ userId });
         if (!user) {
+            console.log("User not found:", userId);
             return res.status(404).json({ error: `User not found with userId: ${userId}` });
         }
 
@@ -197,8 +215,13 @@ router.get('/:userId/history', async (req, res) => {
             .select('orderId billing productDetails createdAt')
             .sort({ createdAt: -1 });
 
+        console.log(`Found ${allOrders.length} orders for user: ${userId}`);
+
         // Helper function to format date and time
         const formatDateTime = (dateObj) => {
+            if (!dateObj) {
+                return { date: 'N/A', time: 'N/A' };
+            }
             const date = new Date(dateObj);
             const formattedDate = date.toLocaleDateString('en-US', {
                 month: 'short',
@@ -215,8 +238,19 @@ router.get('/:userId/history', async (req, res) => {
 
         // Transform orders into transaction history
         const transactionHistory = allOrders.map(order => {
-            const isDuesPayment = order.orderId.includes('DUE');
+            // Skip orders with missing billing data
+            if (!order.billing) {
+                console.log(`Skipping order ${order.orderId} - missing billing data`);
+                return null;
+            }
+
+            const isDuesPayment = order.orderId && order.orderId.includes('DUE');
             const { date, time } = formatDateTime(order.createdAt);
+
+            // Ensure billing values are numbers
+            const finalAmount = order.billing.finalAmount || 0;
+            const moneyGiven = order.billing.moneyGiven || 0;
+            const pastOrderDue = order.billing.pastOrderDue || 0;
 
             if (isDuesPayment) {
                 // CREDIT - Dues payment (reduces dues)
@@ -224,24 +258,24 @@ router.get('/:userId/history', async (req, res) => {
                     type: 'CREDIT',
                     isDebit: false,
                     orderId: order.orderId,
-                    amount: order.billing.moneyGiven,
-                    duesBefore: order.billing.pastOrderDue,
-                    duesAfter: order.billing.finalAmount,
+                    amount: moneyGiven,
+                    duesBefore: pastOrderDue,
+                    duesAfter: finalAmount,
                     description: 'Dues Payment',
-                    paymentMethod: order.billing.paymentMethod,
+                    paymentMethod: order.billing.paymentMethod || 'N/A',
                     date: date,
                     time: time
                 };
             } else {
                 // Regular order - check if it added dues
-                const duesAdded = order.billing.finalAmount - order.billing.moneyGiven;
+                const duesAdded = finalAmount - moneyGiven;
                 if (duesAdded > 0) {
                     // DEBIT - Order with unpaid amount (increases dues)
-                    const productNames = order.productDetails
-                        .map(p => p.name)
+                    const productNames = (order.productDetails || [])
+                        .map(p => p.name || 'Unknown')
                         .slice(0, 3)
                         .join(', ');
-                    const moreProducts = order.productDetails.length > 3
+                    const moreProducts = (order.productDetails || []).length > 3
                         ? ` +${order.productDetails.length - 3} more`
                         : '';
 
@@ -250,10 +284,10 @@ router.get('/:userId/history', async (req, res) => {
                         isDebit: true,
                         orderId: order.orderId,
                         amount: duesAdded,
-                        orderTotal: order.billing.finalAmount,
-                        moneyPaid: order.billing.moneyGiven,
+                        orderTotal: finalAmount,
+                        moneyPaid: moneyGiven,
                         description: `Order: ${productNames}${moreProducts}`,
-                        paymentMethod: order.billing.paymentMethod,
+                        paymentMethod: order.billing.paymentMethod || 'N/A',
                         date: date,
                         time: time
                     };
@@ -261,6 +295,8 @@ router.get('/:userId/history', async (req, res) => {
             }
             return null;
         }).filter(Boolean); // Remove null entries (orders with no dues impact)
+
+        console.log(`Found ${transactionHistory.length} dues transactions for user: ${userId}`);
 
         res.json({
             success: true,

@@ -102,7 +102,7 @@ const simpleOrderSchema = Joi.object({
 router.post('/review', async (req, res) => {
     console.log("Order Review Request:", JSON.stringify(req.body, null, 2));
     try {
-        const { error, value } = simpleOrderSchema.validate(req.body, { abortEarly: false });
+        const { error, value } = simpleOrderSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
         if (error) {
             const errors = error.details.map(err => err.message);
             return res.status(400).json({ error: 'Validation failed', details: errors });
@@ -255,7 +255,7 @@ router.post('/review', async (req, res) => {
 router.post('/', async (req, res) => {
     console.log("Received order data:", JSON.stringify(req.body, null, 2));
     try {
-        const { error, value } = simpleOrderSchema.validate(req.body, { abortEarly: false });
+        const { error, value } = simpleOrderSchema.validate(req.body, { abortEarly: false, stripUnknown: true });
         if (error) {
             const errors = error.details.map(err => err.message);
             console.error('Validation errors:', errors);
