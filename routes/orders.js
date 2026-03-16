@@ -122,6 +122,20 @@ router.post('/review', async (req, res) => {
             deliveryCharges = user.delivery || 0;
         }
 
+        // Helper function to parse weight string (e.g., "100g", "1kg", "500ml") to numeric value in grams
+        const parseWeight = (weightStr) => {
+            if (!weightStr) return 0;
+            if (typeof weightStr === 'number') return weightStr;
+            const str = String(weightStr).toLowerCase().trim();
+            const match = str.match(/^([\d.]+)\s*(g|gm|gram|grams|kg|kilogram|ml|l|liter|litre|pcs|pc|piece|pieces)?$/i);
+            if (!match) return 0;
+            const value = parseFloat(match[1]);
+            const unit = match[2] || 'g';
+            if (unit === 'kg' || unit === 'kilogram') return value * 1000;
+            if (unit === 'l' || unit === 'liter' || unit === 'litre') return value * 1000;
+            return value;
+        };
+
         // Validate and fetch all products
         const productDetails = [];
         let orderAmount = 0;
@@ -135,19 +149,20 @@ router.post('/review', async (req, res) => {
 
             const rate = item.rate || product.rate || product.mrp;
             const totalAmount = rate * item.quantity;
-            const itemWeight = (product.weight || 0) * item.quantity;
+            const numericWeight = parseWeight(product.weight);
+            const itemWeight = numericWeight * item.quantity;
 
             productDetails.push({
                 productId: product.productId,
-                name: product.name,
-                weight: product.weight || 0,
+                productName: product.productName || 'Unknown',
+                weight: product.weight || 'N/A',
                 unit: product.unit || 'N/A',
                 mrp: product.mrp || 0,
                 rate: rate,
                 quantity: item.quantity,
                 totalAmount: totalAmount,
                 item_total_weight: itemWeight,
-                image: product.image || ''
+                image: product.productImage?.[0]?.image || ''
             });
 
             orderAmount += totalAmount;
@@ -170,14 +185,15 @@ router.post('/review', async (req, res) => {
                 if (!freeProduct) {
                     return res.status(400).json({ error: `Free product not found: ${fp.productId}` });
                 }
-                const fpWeight = (freeProduct.weight || 0) * (fp.quantity || 1);
+                const numericFpWeight = parseWeight(freeProduct.weight);
+                const fpWeight = numericFpWeight * (fp.quantity || 1);
                 const fpMrpTotal = (freeProduct.mrp || 0) * (fp.quantity || 1);
                 freeProductsWeight += fpWeight;
                 freeProductsMrpTotal += fpMrpTotal;
                 freeProductsList.push({
                     productId: freeProduct.productId,
-                    name: freeProduct.name,
-                    weight: freeProduct.weight || 0,
+                    productName: freeProduct.productName || 'Unknown',
+                    weight: freeProduct.weight || 'N/A',
                     unit: freeProduct.unit || 'N/A',
                     mrp: freeProduct.mrp || 0,
                     rate: 0,
@@ -185,7 +201,7 @@ router.post('/review', async (req, res) => {
                     totalAmount: 0,
                     item_total_weight: fpWeight,
                     item_mrp_total: fpMrpTotal,
-                    image: freeProduct.image || ''
+                    image: freeProduct.productImage?.[0]?.image || ''
                 });
             }
         }
@@ -276,6 +292,20 @@ router.post('/', async (req, res) => {
             deliveryCharges = user.delivery || 0;
         }
 
+        // Helper function to parse weight string (e.g., "100g", "1kg", "500ml") to numeric value
+        const parseWeight = (weightStr) => {
+            if (!weightStr) return 0;
+            if (typeof weightStr === 'number') return weightStr;
+            const str = String(weightStr).toLowerCase().trim();
+            const match = str.match(/^([\d.]+)\s*(g|gm|gram|grams|kg|kilogram|ml|l|liter|litre|pcs|pc|piece|pieces)?$/i);
+            if (!match) return 0;
+            const value = parseFloat(match[1]);
+            const unit = match[2] || 'g';
+            if (unit === 'kg' || unit === 'kilogram') return value * 1000;
+            if (unit === 'l' || unit === 'liter' || unit === 'litre') return value * 1000;
+            return value;
+        };
+
         // Validate and fetch all products BEFORE creating order
         const productDetails = [];
         let orderAmount = 0;
@@ -289,18 +319,19 @@ router.post('/', async (req, res) => {
 
             const rate = item.rate || product.rate || product.mrp;
             const totalAmount = rate * item.quantity;
-            const itemWeight = (product.weight || 0) * item.quantity;
+            const numericWeight = parseWeight(product.weight);
+            const itemWeight = numericWeight * item.quantity;
 
             productDetails.push({
                 productId: product.productId,
-                name: product.name,
-                weight: product.weight || 0,
+                name: product.productName || 'Unknown',
+                weight: product.weight || 'N/A',
                 unit: product.unit || 'N/A',
                 mrp: product.mrp || 0,
                 rate: rate,
                 quantity: item.quantity,
                 totalAmount: totalAmount,
-                image: product.image || ''
+                image: product.productImage?.[0]?.image || ''
             });
 
             orderAmount += totalAmount;
@@ -322,14 +353,14 @@ router.post('/', async (req, res) => {
                 }
                 freeProductsList.push({
                     productId: freeProduct.productId,
-                    name: freeProduct.name,
-                    weight: freeProduct.weight || 0,
+                    name: freeProduct.productName || 'Unknown',
+                    weight: freeProduct.weight || 'N/A',
                     unit: freeProduct.unit || 'N/A',
                     mrp: freeProduct.mrp || 0,
                     rate: 0,
                     quantity: fp.quantity || 1,
                     totalAmount: 0,
-                    image: freeProduct.image || ''
+                    image: freeProduct.productImage?.[0]?.image || ''
                 });
             }
         }
