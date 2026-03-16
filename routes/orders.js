@@ -169,11 +169,11 @@ router.post('/review', async (req, res) => {
             orderWeight += itemWeight;
         }
 
-        // Calculate billing
-        const pastOrderDue = user.dues || 0;
+        // Calculate billing (pastOrderDue not included in review - only for this order)
+        const userCurrentDues = user.dues || 0;
         const totalAmount = orderAmount + deliveryCharges;
-        const finalAmount = totalAmount + pastOrderDue;
-        const newDues = finalAmount - moneyGiven;
+        const finalAmount = totalAmount; // No pastOrderDue in review
+        const newDues = finalAmount - moneyGiven; // Dues from this order only
 
         // Process free products - fetch from database
         const freeProductsList = [];
@@ -219,7 +219,7 @@ router.post('/review', async (req, res) => {
                 userId: user.userId,
                 name: user.name,
                 shopName: user.shopName,
-                userDues: pastOrderDue,
+                currentDues: userCurrentDues, // User's existing dues (info only)
                 address: user.address || '',
                 town: user.town || '',
                 state: user.state || '',
@@ -241,10 +241,8 @@ router.post('/review', async (req, res) => {
                 totalAmount,
                 paymentMethod,
                 moneyGiven,
-                pastOrderDue,
                 finalAmount,
-                newDues,
-                dueChange: newDues - pastOrderDue
+                duesFromThisOrder: newDues // Dues generated from this order only
             },
             summary: {
                 totalProducts: productDetails.length,
@@ -253,8 +251,7 @@ router.post('/review', async (req, res) => {
                 hasFreeProducts: freeProductsList.length > 0,
                 freeProductsCount: freeProductsList.length,
                 freeProductsQuantity: freeProductsList.reduce((sum, p) => sum + p.quantity, 0),
-                willCreateDues: newDues > 0,
-                duesCleared: pastOrderDue > 0 && newDues === 0
+                willCreateDues: newDues > 0
             },
             isfreeProducts: freeProductsList.length > 0,
             comments: comments || ''
@@ -475,10 +472,9 @@ router.post('/', async (req, res) => {
                 orderAmount,
                 deliveryCharges,
                 totalAmount,
-                pastOrderDue,
-                finalAmount,
                 moneyGiven,
-                remainingDues: newDues,
+                duesFromThisOrder: totalAmount - moneyGiven, // Dues generated from this order
+                userTotalDues: newDues, // User's total dues after this order
                 paymentMethod,
                 orderDate,
                 orderTime
