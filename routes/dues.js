@@ -248,7 +248,7 @@ router.get('/:userId/history', async (req, res) => {
             const { date, time } = formatDateTime(order.createdAt);
 
             // Ensure billing values are numbers
-            const finalAmount = order.billing.finalAmount || 0;
+            const totalAmount = order.billing.totalAmount || 0; // This order's total (without past dues)
             const moneyGiven = order.billing.moneyGiven || 0;
             const pastOrderDue = order.billing.pastOrderDue || 0;
 
@@ -260,7 +260,7 @@ router.get('/:userId/history', async (req, res) => {
                     orderId: order.orderId,
                     amount: moneyGiven,
                     duesBefore: pastOrderDue,
-                    duesAfter: finalAmount,
+                    duesAfter: pastOrderDue - moneyGiven,
                     description: 'Dues Payment',
                     paymentMethod: order.billing.paymentMethod || 'N/A',
                     date: date,
@@ -268,7 +268,8 @@ router.get('/:userId/history', async (req, res) => {
                 };
             } else {
                 // Regular order - check if it added dues
-                const duesAdded = finalAmount - moneyGiven;
+                // duesAdded = this order's total - money paid for this order
+                const duesAdded = totalAmount - moneyGiven;
                 if (duesAdded > 0) {
                     // DEBIT - Order with unpaid amount (increases dues)
                     const productNames = (order.productDetails || [])
@@ -284,7 +285,7 @@ router.get('/:userId/history', async (req, res) => {
                         isDebit: true,
                         orderId: order.orderId,
                         amount: duesAdded,
-                        orderTotal: finalAmount,
+                        orderTotal: totalAmount,
                         moneyPaid: moneyGiven,
                         description: `Order: ${productNames}${moreProducts}`,
                         paymentMethod: order.billing.paymentMethod || 'N/A',

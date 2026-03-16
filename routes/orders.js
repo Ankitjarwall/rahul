@@ -410,8 +410,8 @@ router.post('/', async (req, res) => {
         };
 
         // Generate comment - use provided or create default
-        const orderDate = new Date();
-        const formattedCommentDate = orderDate.toLocaleDateString('en-US', {
+        const commentDate = new Date();
+        const formattedCommentDate = commentDate.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             year: 'numeric'
@@ -421,21 +421,19 @@ router.post('/', async (req, res) => {
 
         orderData.comments = [{
             message: comments || defaultComment,
-            date: orderDate.toISOString()
+            date: commentDate.toISOString()
         }];
 
         // Save order
         const order = new Order(orderData);
         await order.save();
 
-        // Update user dues
-        const newDues = finalAmount - moneyGiven;
-        if (newDues !== pastOrderDue) {
-            await User.findOneAndUpdate(
-                { userId },
-                { $set: { dues: newDues } }
-            );
-        }
+        // Update user dues - newDues is total remaining (pastDues + thisOrderDues - moneyGiven)
+        const newDues = pastOrderDue + (totalAmount - moneyGiven);
+        await User.findOneAndUpdate(
+            { userId },
+            { $set: { dues: newDues } }
+        );
 
         // Save user and product history
         for (const product of productDetails) {
@@ -464,12 +462,12 @@ router.post('/', async (req, res) => {
 
         // Format response
         const now = new Date();
-        const orderDate = now.toLocaleDateString('en-US', {
+        const formattedOrderDate = now.toLocaleDateString('en-US', {
             month: 'short',
             day: 'numeric',
             year: 'numeric'
         });
-        const orderTime = now.toLocaleTimeString('en-US', {
+        const formattedOrderTime = now.toLocaleTimeString('en-US', {
             hour: '2-digit',
             minute: '2-digit',
             hour12: true
@@ -490,8 +488,8 @@ router.post('/', async (req, res) => {
                 duesFromThisOrder: totalAmount - moneyGiven, // Dues generated from this order
                 userTotalDues: newDues, // User's total dues after this order
                 paymentMethod,
-                orderDate,
-                orderTime
+                orderDate: formattedOrderDate,
+                orderTime: formattedOrderTime
             }
         });
     } catch (error) {
