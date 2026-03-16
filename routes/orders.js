@@ -406,9 +406,23 @@ router.post('/', async (req, res) => {
                 pastOrderDue,
                 finalAmount
             },
-            isfreeProducts: freeProductsList.length > 0,
-            comments: comments ? [{ message: comments, date: new Date().toISOString() }] : []
+            isfreeProducts: freeProductsList.length > 0
         };
+
+        // Generate comment - use provided or create default
+        const orderDate = new Date();
+        const formattedCommentDate = orderDate.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
+        });
+        const remainingAmount = totalAmount - moneyGiven;
+        const defaultComment = `Used ${paymentMethod} the amount remaining is ${remainingAmount}rs. ${formattedCommentDate}`;
+
+        orderData.comments = [{
+            message: comments || defaultComment,
+            date: orderDate.toISOString()
+        }];
 
         // Save order
         const order = new Order(orderData);
