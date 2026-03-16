@@ -100,6 +100,7 @@ const simpleOrderSchema = Joi.object({
 
 // ORDER REVIEW - Preview order summary before placing (no save)
 router.post('/review', async (req, res) => {
+    console.log("Order Review Request:", JSON.stringify(req.body, null, 2));
     try {
         const { error, value } = simpleOrderSchema.validate(req.body, { abortEarly: false });
         if (error) {
@@ -162,6 +163,7 @@ router.post('/review', async (req, res) => {
         // Process free products - fetch from database
         const freeProductsList = [];
         let freeProductsWeight = 0;
+        let freeProductsMrpTotal = 0;
         if (freeProducts && freeProducts.length > 0) {
             for (const fp of freeProducts) {
                 const freeProduct = await Product.findOne({ productId: fp.productId });
@@ -169,7 +171,9 @@ router.post('/review', async (req, res) => {
                     return res.status(400).json({ error: `Free product not found: ${fp.productId}` });
                 }
                 const fpWeight = (freeProduct.weight || 0) * (fp.quantity || 1);
+                const fpMrpTotal = (freeProduct.mrp || 0) * (fp.quantity || 1);
                 freeProductsWeight += fpWeight;
+                freeProductsMrpTotal += fpMrpTotal;
                 freeProductsList.push({
                     productId: freeProduct.productId,
                     name: freeProduct.name,
@@ -180,6 +184,7 @@ router.post('/review', async (req, res) => {
                     quantity: fp.quantity || 1,
                     totalAmount: 0,
                     item_total_weight: fpWeight,
+                    item_mrp_total: fpMrpTotal,
                     image: freeProduct.image || ''
                 });
             }
@@ -208,6 +213,9 @@ router.post('/review', async (req, res) => {
                 productsWeight: orderWeight,
                 freeProductsWeight: freeProductsWeight,
                 totalOrderWeight: totalOrderWeight,
+                productsAmount: orderAmount,
+                freeProductsAmount: 0,
+                freeProductsMrpValue: freeProductsMrpTotal,
                 orderAmount,
                 deliveryCharges,
                 totalAmount,
@@ -448,22 +456,27 @@ router.post('/', async (req, res) => {
 
 // GET all orders
 router.get('/', async (req, res) => {
+    console.log("Get All Orders Request");
     try {
         const orders = await Order.find()
             .select('orderId user.name user.shopName user.town user.state productDetails.name billing.totalAmount createdAt');
+        console.log(`Found ${orders.length} orders`);
         res.json(orders);
     } catch (error) {
+        console.error('Error fetching all orders:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
 // SEARCH orders (must be before /:orderId route)
 router.post('/search', async (req, res) => {
+    console.log("Search Orders Request - Query:", req.body.query);
     try {
         const { query } = req.body;
         if (!query) return res.status(400).json({ error: 'No search query provided' });
         const orders = await Order.find({ $text: { $search: query } })
             .select('orderId user.name user.shopName user.town user.state productDetails.name billing.totalAmount createdAt');
+        console.log(`Search found ${orders.length} orders for query: "${query}"`);
         res.json(orders);
     } catch (error) {
         console.error('Error searching orders:', error);
@@ -473,17 +486,25 @@ router.post('/search', async (req, res) => {
 
 // GET specific order
 router.get('/:orderId', async (req, res) => {
+    console.log("Get Order Request - OrderId:", req.params.orderId);
     try {
         const order = await Order.findOne({ orderId: req.params.orderId });
-        if (!order) return res.status(404).json({ error: 'Order not found' });
+        if (!order) {
+            console.log("Order not found:", req.params.orderId);
+            return res.status(404).json({ error: 'Order not found' });
+        }
+        console.log("Order found:", order.orderId);
         res.json(order);
     } catch (error) {
+        console.error('Error fetching order:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
 // UPDATE order
 router.put('/:orderId', async (req, res) => {
+    console.log("Update Order Request - OrderId:", req.params.orderId);
+    console.log("Update Data:", JSON.stringify(req.body, null, 2));
     try {
         const data = { ...req.body };
         if (data.user && typeof data.user.pincode === 'string') {
@@ -521,11 +542,16 @@ router.put('/:orderId', async (req, res) => {
 
 // DELETE order
 router.delete('/:orderId', async (req, res) => {
+    console.log("Delete Order Request - OrderId:", req.params.orderId);
     try {
         const order = await Order.findOneAndDelete({ orderId: req.params.orderId });
-        if (!order) return res.status(404).json({ error: 'Order not found' });
+        if (!order) {
+            console.log("Order not found for deletion:", req.params.orderId);
+            return res.status(404).json({ error: 'Order not found' });
+        }
         await UserHistory.deleteMany({ orderId: order._id });
         await ProductHistory.deleteMany({ orderId: order._id });
+        console.log("Order deleted successfully:", req.params.orderId);
         res.json({ success: 'Order deleted successfully' });
     } catch (error) {
         console.error('Error deleting order:', error);
