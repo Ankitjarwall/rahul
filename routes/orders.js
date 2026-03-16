@@ -329,7 +329,7 @@ router.post('/', async (req, res) => {
             productDetails.push({
                 productId: product.productId,
                 name: product.productName || 'Unknown',
-                weight: product.weight || 'N/A',
+                weight: numericWeight,
                 unit: product.unit || 'N/A',
                 mrp: product.mrp || 0,
                 rate: rate,
@@ -355,10 +355,11 @@ router.post('/', async (req, res) => {
                 if (!freeProduct) {
                     return res.status(400).json({ error: `Free product not found: ${fp.productId}` });
                 }
+                const fpNumericWeight = parseWeight(freeProduct.weight);
                 freeProductsList.push({
                     productId: freeProduct.productId,
                     name: freeProduct.productName || 'Unknown',
-                    weight: freeProduct.weight || 'N/A',
+                    weight: fpNumericWeight,
                     unit: freeProduct.unit || 'N/A',
                     mrp: freeProduct.mrp || 0,
                     rate: 0,
