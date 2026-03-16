@@ -179,6 +179,7 @@ router.post('/review', async (req, res) => {
         const freeProductsList = [];
         let freeProductsWeight = 0;
         let freeProductsMrpTotal = 0;
+        let freeProductsRateTotal = 0;
         if (freeProducts && freeProducts.length > 0) {
             for (const fp of freeProducts) {
                 const freeProduct = await Product.findOne({ productId: fp.productId });
@@ -187,18 +188,21 @@ router.post('/review', async (req, res) => {
                 }
                 const numericFpWeight = parseWeight(freeProduct.weight);
                 const fpWeight = numericFpWeight * (fp.quantity || 1);
+                const fpRate = freeProduct.rate || freeProduct.mrp || 0;
+                const fpTotalAmount = fpRate * (fp.quantity || 1);
                 const fpMrpTotal = (freeProduct.mrp || 0) * (fp.quantity || 1);
                 freeProductsWeight += fpWeight;
                 freeProductsMrpTotal += fpMrpTotal;
+                freeProductsRateTotal += fpTotalAmount;
                 freeProductsList.push({
                     productId: freeProduct.productId,
                     productName: freeProduct.productName || 'Unknown',
                     weight: freeProduct.weight || 'N/A',
                     unit: freeProduct.unit || 'N/A',
                     mrp: freeProduct.mrp || 0,
-                    rate: 0,
+                    rate: fpRate,
                     quantity: fp.quantity || 1,
-                    totalAmount: 0,
+                    totalAmount: fpTotalAmount,
                     item_total_weight: fpWeight,
                     item_mrp_total: fpMrpTotal,
                     image: freeProduct.productImage?.[0]?.image || ''
@@ -230,7 +234,7 @@ router.post('/review', async (req, res) => {
                 freeProductsWeight: freeProductsWeight,
                 totalOrderWeight: totalOrderWeight,
                 productsAmount: orderAmount,
-                freeProductsAmount: 0,
+                freeProductsValue: freeProductsRateTotal,
                 freeProductsMrpValue: freeProductsMrpTotal,
                 orderAmount,
                 deliveryCharges,
