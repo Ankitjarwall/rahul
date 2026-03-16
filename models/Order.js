@@ -55,7 +55,8 @@ const orderSchema = new mongoose.Schema({
         paymentMethod: { type: String, required: true },
         moneyGiven: { type: Number, required: true },
         pastOrderDue: { type: Number, default: 0 },
-        finalAmount: { type: Number, required: true }
+        finalAmount: { type: Number, required: true },
+        duesFromThisOrder: { type: Number, default: 0 } // Remaining unpaid from this order (totalAmount - moneyGiven)
     },
     comments: [{
         message: { type: String, default: "" },

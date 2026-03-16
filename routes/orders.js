@@ -40,7 +40,8 @@ const billingSchema = Joi.object({
     paymentMethod: Joi.string().required(),
     moneyGiven: Joi.number().required(),
     pastOrderDue: Joi.number().required(),
-    finalAmount: Joi.number().required()
+    finalAmount: Joi.number().required(),
+    duesFromThisOrder: Joi.number().default(0) // Remaining unpaid from this order
 }).unknown(true);
 
 // Validation schema for freeProducts
@@ -404,7 +405,8 @@ router.post('/', async (req, res) => {
                 paymentMethod,
                 moneyGiven,
                 pastOrderDue,
-                finalAmount
+                finalAmount,
+                duesFromThisOrder: totalAmount - moneyGiven // Remaining amount unpaid from this order
             },
             isfreeProducts: freeProductsList.length > 0
         };
