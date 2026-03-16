@@ -343,7 +343,8 @@ router.post('/', async (req, res) => {
         // Calculate billing
         const pastOrderDue = user.dues || 0;
         const totalAmount = orderAmount + deliveryCharges;
-        const finalAmount = totalAmount + pastOrderDue;
+        const duesFromThisOrder = totalAmount - moneyGiven; // Unpaid from this order
+        const finalAmount = pastOrderDue + duesFromThisOrder; // Total remaining dues after payment
 
         // Process free products - fetch from database
         const freeProductsList = [];
@@ -405,8 +406,8 @@ router.post('/', async (req, res) => {
                 paymentMethod,
                 moneyGiven,
                 pastOrderDue,
-                finalAmount,
-                duesFromThisOrder: totalAmount - moneyGiven // Remaining amount unpaid from this order
+                duesFromThisOrder,
+                finalAmount // pastOrderDue + duesFromThisOrder (total remaining dues)
             },
             isfreeProducts: freeProductsList.length > 0
         };
@@ -430,11 +431,10 @@ router.post('/', async (req, res) => {
         const order = new Order(orderData);
         await order.save();
 
-        // Update user dues - newDues is total remaining (pastDues + thisOrderDues - moneyGiven)
-        const newDues = pastOrderDue + (totalAmount - moneyGiven);
+        // Update user dues - finalAmount is the new total dues
         await User.findOneAndUpdate(
             { userId },
-            { $set: { dues: newDues } }
+            { $set: { dues: finalAmount } }
         );
 
         // Save user and product history
@@ -487,8 +487,8 @@ router.post('/', async (req, res) => {
                 deliveryCharges,
                 totalAmount,
                 moneyGiven,
-                duesFromThisOrder: totalAmount - moneyGiven, // Dues generated from this order
-                userTotalDues: newDues, // User's total dues after this order
+                duesFromThisOrder, // Dues generated from this order
+                userTotalDues: finalAmount, // User's total dues after this order
                 paymentMethod,
                 orderDate: formattedOrderDate,
                 orderTime: formattedOrderTime
