@@ -250,7 +250,7 @@ router.get('/product/:productId/history-pdf', async (req, res) => {
         // Right Column: History Info (aligned with Product Details)
         doc.fontSize(20).text('PURCHASE HISTORY', 300, startY, { align: 'right' });
         doc.fontSize(12);
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, 300, doc.y + 5, { align: 'right' });
+        doc.text(`Date: ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' })}`, 300, doc.y + 5, { align: 'right' });
         doc.moveDown(2);
 
         // Adjust Y position to the bottom of the tallest column
@@ -282,7 +282,7 @@ router.get('/product/:productId/history-pdf', async (req, res) => {
         doc.font('Helvetica');
         let y = tableTop + 20;
         validHistory.forEach((entry) => {
-            doc.text(new Date(entry.date).toLocaleDateString(), col1, y);
+            doc.text(new Date(entry.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' }), col1, y);
             addText(entry.userName, col2, y, { width: 90 });
             doc.text(`${entry.rate}`, col3, y);
             doc.text(`${entry.quantity}`, col4, y);

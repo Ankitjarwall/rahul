@@ -412,19 +412,28 @@ router.post('/', async (req, res) => {
             isfreeProducts: freeProductsList.length > 0
         };
 
-        // Generate comment - use provided or create default
+        // Generate comment - use provided or create default (IST timezone)
         const commentDate = new Date();
-        const formattedCommentDate = commentDate.toLocaleDateString('en-US', {
+        const formattedCommentDate = commentDate.toLocaleDateString('en-IN', {
             month: 'short',
             day: 'numeric',
-            year: 'numeric'
+            year: 'numeric',
+            timeZone: 'Asia/Kolkata'
         });
+        const formattedCommentTime = commentDate.toLocaleTimeString('en-IN', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true,
+            timeZone: 'Asia/Kolkata'
+        }).replace(' ', '');
         const remainingAmount = totalAmount - moneyGiven;
         const defaultComment = `Used ${paymentMethod} the amount remaining is ${remainingAmount}rs. ${formattedCommentDate}`;
 
+        // Store date in IST format
+        const istDateString = commentDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
         orderData.comments = [{
             message: comments || defaultComment,
-            date: commentDate.toISOString()
+            date: `${formattedCommentDate} ${formattedCommentTime} IST`
         }];
 
         // Save order
@@ -462,17 +471,19 @@ router.post('/', async (req, res) => {
             await productHistory.save();
         }
 
-        // Format response
+        // Format response (IST timezone)
         const now = new Date();
-        const formattedOrderDate = now.toLocaleDateString('en-US', {
+        const formattedOrderDate = now.toLocaleDateString('en-IN', {
             month: 'short',
             day: 'numeric',
-            year: 'numeric'
+            year: 'numeric',
+            timeZone: 'Asia/Kolkata'
         });
-        const formattedOrderTime = now.toLocaleTimeString('en-US', {
+        const formattedOrderTime = now.toLocaleTimeString('en-IN', {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: true
+            hour12: true,
+            timeZone: 'Asia/Kolkata'
         }).replace(' ', '');
 
         res.status(201).json({
@@ -651,10 +662,11 @@ router.get('/:orderId/invoice', async (req, res) => {
         addText(`Address: ${order.user.address}, ${order.user.town}, ${order.user.state}, ${order.user.pincode}`, 50, doc.y + 5, { width: columnWidth });
         addText(`Contact: ${order.user.contact?.[0]?.contact || 'N/A'}`, 50, doc.y + 5, { width: columnWidth });
 
-        const formattedDate = new Date(order.createdAt).toLocaleDateString('en-GB', {
+        const formattedDate = new Date(order.createdAt).toLocaleDateString('en-IN', {
             day: 'numeric',
             month: 'long',
-            year: 'numeric'
+            year: 'numeric',
+            timeZone: 'Asia/Kolkata'
         });
 
         // Right Column: Invoice Info (aligned with Customer Details)

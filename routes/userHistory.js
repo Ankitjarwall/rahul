@@ -255,7 +255,7 @@ router.get('/user/:userId/history-pdf', async (req, res) => {
         doc.fontSize(20).text('PURCHASE HISTORY', 300, startY, { align: 'right' });
         doc.fontSize(12);
         doc.text(`User ID: ${userId}`, 300, doc.y + 5, { align: 'right' });
-        doc.text(`Date: ${new Date().toLocaleDateString()}`, 300, doc.y + 5, { align: 'right' });
+        doc.text(`Date: ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' })}`, 300, doc.y + 5, { align: 'right' });
         // Add Due Payment in red
         doc.fillColor('red');
         doc.text(`Due Payment: INR ${(user.dues || 0).toFixed(2)}`, 300, doc.y + 5, { align: 'right' });
@@ -304,7 +304,7 @@ router.get('/user/:userId/history-pdf', async (req, res) => {
             // Add sign for items with the same Order ID (except the first in the group)
             const sign = (index > 0 && validHistory[index - 1].orderId === entry.orderId) ? (usePlusSign ? '+' : '-') : '';
 
-            doc.text(new Date(entry.orderDate).toLocaleDateString(), col1, y);
+            doc.text(new Date(entry.orderDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: 'numeric', month: 'short', year: 'numeric' }), col1, y);
             doc.text(`${entry.orderId} ${sign}`, col2, y);
             addText(entry.productName, col3, y, { width: 175 }); // Adjusted to 175 to fit page
             doc.text(`${entry.rate}`, col4, y);

@@ -157,17 +157,19 @@ router.post('/:userId/pay', async (req, res) => {
             }
         );
 
-        // Format date and time
+        // Format date and time (IST timezone)
         const now = new Date();
-        const paymentDate = now.toLocaleDateString('en-US', {
+        const paymentDate = now.toLocaleDateString('en-IN', {
             month: 'short',
             day: 'numeric',
-            year: 'numeric'
+            year: 'numeric',
+            timeZone: 'Asia/Kolkata'
         });
-        const paymentTime = now.toLocaleTimeString('en-US', {
+        const paymentTime = now.toLocaleTimeString('en-IN', {
             hour: '2-digit',
             minute: '2-digit',
-            hour12: true
+            hour12: true,
+            timeZone: 'Asia/Kolkata'
         }).replace(' ', '');
 
         res.status(201).json({
@@ -217,21 +219,23 @@ router.get('/:userId/history', async (req, res) => {
 
         console.log(`Found ${allOrders.length} orders for user: ${userId}`);
 
-        // Helper function to format date and time
+        // Helper function to format date and time (IST timezone)
         const formatDateTime = (dateObj) => {
             if (!dateObj) {
                 return { date: 'N/A', time: 'N/A' };
             }
             const date = new Date(dateObj);
-            const formattedDate = date.toLocaleDateString('en-US', {
+            const formattedDate = date.toLocaleDateString('en-IN', {
                 month: 'short',
                 day: 'numeric',
-                year: 'numeric'
+                year: 'numeric',
+                timeZone: 'Asia/Kolkata'
             });
-            const formattedTime = date.toLocaleTimeString('en-US', {
+            const formattedTime = date.toLocaleTimeString('en-IN', {
                 hour: '2-digit',
                 minute: '2-digit',
-                hour12: true
+                hour12: true,
+                timeZone: 'Asia/Kolkata'
             }).replace(' ', '');
             return { date: formattedDate, time: formattedTime };
         };
