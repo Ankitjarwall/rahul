@@ -36,3 +36,4 @@ venv/
 seed_data.py
 seed_requirements.txt
 package-lock.json
+.claude/

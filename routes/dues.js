@@ -289,6 +289,8 @@ router.get('/:userId/history', async (req, res) => {
                         isDebit: true,
                         orderId: order.orderId,
                         amount: duesAdded,
+                        duesBefore: pastOrderDue,
+                        duesAfter: pastOrderDue + duesAdded,
                         orderTotal: totalAmount,
                         moneyPaid: moneyGiven,
                         description: `Order: ${productNames}${moreProducts}`,
