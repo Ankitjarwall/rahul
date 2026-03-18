@@ -427,7 +427,7 @@ router.post('/', async (req, res) => {
             timeZone: 'Asia/Kolkata'
         }).replace(' ', '');
         const remainingAmount = totalAmount - moneyGiven;
-        const defaultComment = `Used ${paymentMethod} the amount remaining is ${remainingAmount}rs. ${formattedCommentDate}`;
+        const defaultComment = `Used ${paymentMethod} the order amount remaining is ${remainingAmount}rs. ${formattedCommentDate} Your total dues is ${finalAmount}rs.`;
 
         // Store date in IST format
         const istDateString = commentDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
@@ -687,7 +687,7 @@ router.get('/:orderId/invoice', async (req, res) => {
 
         // Product Details Table (full width)
         doc.fontSize(14).font('Helvetica-Bold').text('Order Details', 50, doc.y, { underline: true });
-        
+
         let tableTop = doc.y + 10;
         if (isNaN(tableTop)) {
             console.error('Invalid tableTop:', tableTop);
