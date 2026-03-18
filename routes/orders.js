@@ -96,7 +96,7 @@ const simpleOrderSchema = Joi.object({
     deliveryCharges: Joi.number().min(0).optional(), // Optional, will use user's delivery rate if not provided
     moneyGiven: Joi.number().min(0).default(0),
     paymentMethod: Joi.string().valid('Cash', 'Credit').default('Cash'),
-    comments: Joi.string().optional()
+    comments: Joi.string().allow('', null).optional()
 });
 
 // ORDER REVIEW - Preview order summary before placing (no save)
@@ -431,8 +431,10 @@ router.post('/', async (req, res) => {
 
         // Store date in IST format
         const istDateString = commentDate.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+        // Use provided comment or default (empty string also uses default)
+        const finalComment = (comments && comments.trim()) ? comments.trim() : defaultComment;
         orderData.comments = [{
-            message: comments || defaultComment,
+            message: finalComment,
             date: `${formattedCommentDate} ${formattedCommentTime} IST`
         }];
 
