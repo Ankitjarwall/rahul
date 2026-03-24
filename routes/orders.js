@@ -10,6 +10,9 @@ const path = require('path');
 const UserHistory = require('../models/userHistory');
 const ProductHistory = require('../models/productHistory');
 
+// Helper function: Round to 2 decimal places using ceiling
+const roundCeil2 = (value) => Math.ceil(value * 100) / 100;
+
 // Validation schema for productDetails 
 const productSchema = Joi.object({
     productId: Joi.string().required(),
@@ -172,9 +175,9 @@ router.post('/review', async (req, res) => {
 
         // Calculate billing (pastOrderDue not included in review - only for this order)
         const userCurrentDues = user.dues || 0;
-        const totalAmount = orderAmount + deliveryCharges;
-        const finalAmount = totalAmount; // No pastOrderDue in review
-        const newDues = finalAmount - moneyGiven; // Dues from this order only
+        const totalAmount = roundCeil2(orderAmount + deliveryCharges);
+        const finalAmount = roundCeil2(totalAmount); // No pastOrderDue in review
+        const newDues = roundCeil2(finalAmount - moneyGiven); // Dues from this order only
 
         // Process free products - fetch from database
         const freeProductsList = [];
@@ -342,9 +345,9 @@ router.post('/', async (req, res) => {
 
         // Calculate billing
         const pastOrderDue = user.dues || 0;
-        const totalAmount = orderAmount + deliveryCharges;
-        const duesFromThisOrder = totalAmount - moneyGiven; // Unpaid from this order
-        const finalAmount = pastOrderDue + duesFromThisOrder; // Total remaining dues after payment
+        const totalAmount = roundCeil2(orderAmount + deliveryCharges);
+        const duesFromThisOrder = roundCeil2(totalAmount - moneyGiven); // Unpaid from this order
+        const finalAmount = roundCeil2(pastOrderDue + duesFromThisOrder); // Total remaining dues after payment
 
         // Process free products - fetch from database
         const freeProductsList = [];
