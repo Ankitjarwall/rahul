@@ -307,23 +307,6 @@ def run_all_tests():
     test_endpoint("GET", "/search/orders?q=Test", show_full=True)
     test_endpoint("GET", "/search/users?q=Test", show_full=True)
 
-    # ============================================
-    # 10. PDF ENDPOINTS (Just show URLs)
-    # ============================================
-    print_header("PDF ENDPOINTS")
-
-    print(f"{Colors.YELLOW}PDF endpoints return binary files. Open these URLs in browser:{Colors.END}\n")
-
-    if created_order_id:
-        print(f"  Order Invoice: {BASE_URL}/orders/{created_order_id}/invoice")
-
-    if created_user_id:
-        print(f"  User History PDF: {BASE_URL}/user-history/user/{created_user_id}/history-pdf")
-
-    if created_product_id:
-        print(f"  Product History PDF: {BASE_URL}/product-history/product/{created_product_id}/history-pdf")
-
-    print()
 
     # ============================================
     # CLEANUP (Optional - Uncomment to delete test data)

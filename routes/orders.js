@@ -10,7 +10,7 @@ const path = require('path');
 const UserHistory = require('../models/userHistory');
 const ProductHistory = require('../models/productHistory');
 
-// Validation schema for productDetails
+// Validation schema for productDetails 
 const productSchema = Joi.object({
     productId: Joi.string().required(),
     name: Joi.string().required(),
@@ -619,7 +619,16 @@ router.delete('/:orderId', async (req, res) => {
 });
 
 // GENERATE PDF INVOICE
+// [DISABLED] To enable, set ENABLE_ORDER_INVOICE_PDF = true
+const ENABLE_ORDER_INVOICE_PDF = false;
 router.get('/:orderId/invoice', async (req, res) => {
+    if (!ENABLE_ORDER_INVOICE_PDF) {
+        return res.status(503).json({
+            error: 'This endpoint is temporarily disabled',
+            endpoint: '/api/orders/:orderId/invoice',
+            message: 'PDF invoice generation is currently unavailable'
+        });
+    }
     try {
         const order = await Order.findOne({ orderId: req.params.orderId });
         if (!order) {

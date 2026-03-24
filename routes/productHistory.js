@@ -161,7 +161,16 @@ router.post('/search', async (req, res) => {
 });
 
 // GENERATE PRODUCT HISTORY PDF
+// [DISABLED] To enable, set ENABLE_PRODUCT_HISTORY_PDF = true
+const ENABLE_PRODUCT_HISTORY_PDF = false;
 router.get('/product/:productId/history-pdf', async (req, res) => {
+    if (!ENABLE_PRODUCT_HISTORY_PDF) {
+        return res.status(503).json({
+            error: 'This endpoint is temporarily disabled',
+            endpoint: '/api/product-history/product/:productId/history-pdf',
+            message: 'Product history PDF generation is currently unavailable'
+        });
+    }
     try {
         const { productId } = req.params;
 

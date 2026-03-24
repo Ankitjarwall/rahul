@@ -163,7 +163,16 @@ router.post('/search', async (req, res) => {
 });
 
 // GENERATE USER HISTORY PDF
+// [DISABLED] To enable, set ENABLE_USER_HISTORY_PDF = true
+const ENABLE_USER_HISTORY_PDF = false;
 router.get('/user/:userId/history-pdf', async (req, res) => {
+    if (!ENABLE_USER_HISTORY_PDF) {
+        return res.status(503).json({
+            error: 'This endpoint is temporarily disabled',
+            endpoint: '/api/user-history/user/:userId/history-pdf',
+            message: 'User history PDF generation is currently unavailable'
+        });
+    }
     try {
         const { userId } = req.params;
 
