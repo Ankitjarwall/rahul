@@ -197,9 +197,9 @@ router.post('/review', async (req, res) => {
                 const fpWeight = numericFpWeight * (fp.quantity || 1);
                 const fpRate = freeProduct.rate || freeProduct.mrp || 0;
                 const fpTotalAmount = roundCeil2(fpRate * (fp.quantity || 1));
-                const fpMrpTotal = roundCeil2((freeProduct.mrp || 0) * (fp.quantity || 1));
+                const fpRateTotal = roundCeil2(fpRate * (fp.quantity || 1)); // Calculate on rate, not mrp
                 freeProductsWeight += fpWeight;
-                freeProductsMrpTotal += fpMrpTotal;
+                freeProductsMrpTotal += fpRateTotal; // Now based on rate
                 freeProductsRateTotal += fpTotalAmount;
                 freeProductsList.push({
                     productId: freeProduct.productId,
@@ -211,7 +211,7 @@ router.post('/review', async (req, res) => {
                     quantity: fp.quantity || 1,
                     totalAmount: fpTotalAmount,
                     item_total_weight: fpWeight,
-                    item_mrp_total: fpMrpTotal,
+                    item_mrp_total: fpRateTotal, // Now based on rate
                     image: freeProduct.productImage?.[0]?.image || ''
                 });
             }
