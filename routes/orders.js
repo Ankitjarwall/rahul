@@ -196,8 +196,8 @@ router.post('/review', async (req, res) => {
                 const numericFpWeight = parseWeight(freeProduct.weight);
                 const fpWeight = numericFpWeight * (fp.quantity || 1);
                 const fpRate = freeProduct.rate || freeProduct.mrp || 0;
-                const fpTotalAmount = fpRate * (fp.quantity || 1);
-                const fpMrpTotal = (freeProduct.mrp || 0) * (fp.quantity || 1);
+                const fpTotalAmount = roundCeil2(fpRate * (fp.quantity || 1));
+                const fpMrpTotal = roundCeil2((freeProduct.mrp || 0) * (fp.quantity || 1));
                 freeProductsWeight += fpWeight;
                 freeProductsMrpTotal += fpMrpTotal;
                 freeProductsRateTotal += fpTotalAmount;
@@ -216,6 +216,10 @@ router.post('/review', async (req, res) => {
                 });
             }
         }
+
+        // Round free products totals
+        freeProductsRateTotal = roundCeil2(freeProductsRateTotal);
+        freeProductsMrpTotal = roundCeil2(freeProductsMrpTotal);
 
         // Calculate total order weight (products + free products)
         const totalOrderWeight = orderWeight + freeProductsWeight;
@@ -364,13 +368,14 @@ router.post('/', async (req, res) => {
                     return res.status(400).json({ error: `Free product not found: ${fp.productId}` });
                 }
                 const fpNumericWeight = parseWeight(freeProduct.weight);
+                const fpRate = freeProduct.rate || freeProduct.mrp || 0;
                 freeProductsList.push({
                     productId: freeProduct.productId,
                     name: freeProduct.productName || 'Unknown',
                     weight: fpNumericWeight,
                     unit: freeProduct.unit || 'N/A',
                     mrp: freeProduct.mrp || 0,
-                    rate: 0,
+                    rate: fpRate,
                     quantity: fp.quantity || 1,
                     totalAmount: 0,
                     image: freeProduct.productImage?.[0]?.image || ''
