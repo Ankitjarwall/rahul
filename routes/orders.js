@@ -152,7 +152,7 @@ router.post('/review', async (req, res) => {
             }
 
             const rate = item.rate || product.rate || product.mrp;
-            const totalAmount = rate * item.quantity;
+            const totalAmount = roundCeil2(rate * item.quantity);
             const numericWeight = parseWeight(product.weight);
             const itemWeight = numericWeight * item.quantity;
 
@@ -172,6 +172,9 @@ router.post('/review', async (req, res) => {
             orderAmount += totalAmount;
             orderWeight += itemWeight;
         }
+
+        // Round orderAmount after summing all products
+        orderAmount = roundCeil2(orderAmount);
 
         // Calculate billing (pastOrderDue not included in review - only for this order)
         const userCurrentDues = user.dues || 0;
@@ -323,7 +326,7 @@ router.post('/', async (req, res) => {
             }
 
             const rate = item.rate || product.rate || product.mrp;
-            const totalAmount = rate * item.quantity;
+            const totalAmount = roundCeil2(rate * item.quantity);
             const numericWeight = parseWeight(product.weight);
             const itemWeight = numericWeight * item.quantity;
 
@@ -342,6 +345,9 @@ router.post('/', async (req, res) => {
             orderAmount += totalAmount;
             orderWeight += itemWeight;
         }
+
+        // Round orderAmount after summing all products
+        orderAmount = roundCeil2(orderAmount);
 
         // Calculate billing
         const pastOrderDue = user.dues || 0;
